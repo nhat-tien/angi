@@ -1,0 +1,12 @@
+{
+   port = "3030";
+   route = [
+      {
+         path = "/";
+         method = "get";
+         handler = fn () {
+            return "Hello world";
+         }
+      }
+   ]
+}
