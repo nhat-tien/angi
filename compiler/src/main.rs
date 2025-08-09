@@ -1,8 +1,9 @@
 mod lexing;
-mod cli;
+mod command;
+mod parser;
 
-use cli::run_cli;
+use command::handle_command;
 
 fn main() {
-    run_cli();
+    handle_command();
 }

@@ -9,9 +9,10 @@ pub enum Token {
     Equal, // =
     Semicolon, // ;
     
-    Identifier(String),
+    Name(String),
     String(String),
     Number(i32),
-
+    
+    NewLine,
     Eof
 }
