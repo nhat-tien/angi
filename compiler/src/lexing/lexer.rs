@@ -30,17 +30,20 @@ where
             chr0: None,
             chr1: None,
             current_loc: 1,
-            current_pos: -1,
+            current_pos: 0,
         };
-        let _ = lx.next_char();
-        let _ = lx.next_char();
+
+        lx.move_next_char();
+        lx.move_next_char();
+        lx.current_pos = 1;
+
         lx
     }
 
     fn consume_next(&mut self) -> LexResult {
         while self.pending.is_empty() {
             self.consume()?;
-        }
+        };
 
         Ok(self.pending.remove(0))
     }
@@ -50,19 +53,22 @@ where
             if self.is_name_start(c) {
                 let name = self.lex_name()?;
                 self.emit(name);
+                self.move_next_char();
             } else {
                 self.consume_character(c)?;
             }
         } else {
             let line = self.get_line();
             let tok_pos = self.get_pos();
-            self.emit((line, Token::Eof, (tok_pos, tok_pos)));
+            self.emit((line, Token::EndOfFile, (tok_pos, tok_pos)));
+            self.emit((line, Token::None, (tok_pos, tok_pos)));
         }
 
         Ok(())
     }
 
-    fn next_char(&mut self) -> Option<char> {
+    fn move_next_char(&mut self) {
+
         if let Some('\r') = self.chr0 {
             if let Some('\n') = self.chr1 {
                 self.chr0 = Some('\n');
@@ -71,16 +77,10 @@ where
             }
         }
 
-        // if self.chr0.is_some() || self.chr1.is_some() {
-        //     self.current_pos += 1;
-        // }
-
         self.current_pos += 1;
-        let c = self.chr0;
         let next_char = self.chars.next();
         self.chr0 = self.chr1;
         self.chr1 = next_char;
-        c
     }
 
     fn get_pos(&self) -> i32 {
@@ -100,8 +100,14 @@ where
     }
 
     fn is_name_continuation(&self) -> bool {
-        self.chr0
+        self.chr1
             .map(|c| matches!(c, '_' | '0'..='9' | 'a'..='z' | 'A'..='Z'))
+            .unwrap_or(false)
+    }
+
+    fn is_string_continuation(&self) -> bool {
+        self.chr1
+            .map(|c| !matches!(c, '"'))
             .unwrap_or(false)
     }
 
@@ -112,51 +118,95 @@ where
 
         let start_pos = self.get_pos();
 
-        while self.is_name_continuation() {
-            name.push(self.next_char().expect("lex_name"));
+        loop {
+            name.push(self.chr0.expect("lex_name"));
+            if !self.is_name_continuation() {
+                break;
+            }
+            self.move_next_char();
         }
 
         let end_pos = self.get_pos();
 
-        match name {
-            _ => Ok((line, Token::Name(name), (start_pos, end_pos))),
+        match Token::str_to_keyword(&name) {
+            Some(token) => Ok((line, token, (start_pos, end_pos))),
+            None => Ok((line, Token::Name(name), (start_pos, end_pos))),
         }
     }
 
-    fn consume_character(&mut self, c: char) -> Result<(), LexicalError> {
+    fn lex_string(&mut self) -> LexResult {
+        let mut string = String::new();
         let line = self.get_line();
-        let pos = self.get_pos();
+        let start_pos = self.get_pos();
 
+        self.move_next_char(); // Discard the "
+
+        loop {
+            string.push(self.chr0.expect("lex_string"));
+
+            if !self.is_string_continuation() {
+                break;
+            }
+            self.move_next_char();
+        }
+
+        self.move_next_char(); // Get end position of the last "
+        let end_pos = self.get_pos();
+
+        Ok((line, Token::String(string), (start_pos, end_pos)))
+    }
+
+    fn consume_character(&mut self, c: char) -> Result<(), LexicalError> {
         match c {
             '{' => {
-                self.emit((line, Token::LeftBrace, (pos, pos)));
+                self.emit_one_character(Token::LeftBrace);
             }
             '}' => {
-                self.emit((line, Token::RightBrace, (pos, pos)));
+                self.emit_one_character(Token::RightBracket);
             }
             '[' => {
-                self.emit((line, Token::LeftBracket, (pos, pos)));
+                self.emit_one_character(Token::LeftBracket);
             }
             ']' => {
-                self.emit((line, Token::RightBracket, (pos, pos)));
+                self.emit_one_character(Token::RightBracket);
             }
             '=' => {
-                self.emit((line, Token::Equal, (pos, pos)));
+                self.emit_one_character(Token::Equal);
             }
             ';' => {
-                self.emit((line, Token::Semicolon, (pos, pos)));
+                self.emit_one_character(Token::Semicolon);
+            }
+            '(' => {
+                self.emit_one_character(Token::LeftParen);
+            }
+            ')' => {
+                self.emit_one_character(Token::RightParen);
+            }
+            '"' => {
+                    let string = self.lex_string()?;
+                    self.emit(string);
             }
             '\n' => {
-                self.current_loc += 1;
-                self.current_pos = 0;
-                self.emit((line, Token::NewLine, (pos, pos)));
+                self.emit_one_character(Token::NewLine);
+                self.reset_line();
             }
             _ => {}
         }
 
-        let _ = self.next_char();
+        self.move_next_char();
 
         Ok(())
+    }
+
+    fn reset_line(&mut self) {
+        self.current_loc += 1;
+        self.current_pos = 0;
+    }
+
+    fn emit_one_character(&mut self, token: Token) {
+        let line = self.get_line();
+        let pos = self.get_pos();
+        self.emit((line, token, (pos, pos)));
     }
 }
 
@@ -170,7 +220,7 @@ where
         let token = self.consume_next();
 
         match token {
-            Ok((_, Token::Eof, _)) => None,
+            Ok((_, Token::None, _)) => None,
             s => Some(s),
         }
     }

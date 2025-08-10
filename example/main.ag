@@ -4,9 +4,10 @@
       {
          path = "/";
          method = "get";
-         handler = fn () {
+         handler = () {
             return "Hello world";
          }
       }
    ]
 }
+
