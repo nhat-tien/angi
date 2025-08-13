@@ -54,6 +54,10 @@ where
                 let name = self.lex_name()?;
                 self.emit(name);
                 self.move_next_char();
+            } else if self.is_number_start(c, self.chr1) {
+                let number = self.lex_number()?;
+                self.emit(number);
+                self.move_next_char();
             } else {
                 self.consume_character(c)?;
             }
@@ -65,6 +69,14 @@ where
         }
 
         Ok(())
+    }
+
+    fn is_number_start(&self, c: char, c1: Option<char>) -> bool {
+        match c {
+            '0'..='9' => true,
+            '-' => matches!(c1, Some('0'..='9')),
+            _ => false,
+        }
     }
 
     fn move_next_char(&mut self) {
@@ -96,7 +108,8 @@ where
     }
 
     fn is_name_start(&self, c: char) -> bool {
-        matches!(c, '_' | 'a'..='z')
+        // matches!(c, 'a'..='z')
+        c.is_alphabetic()
     }
 
     fn is_name_continuation(&self) -> bool {
@@ -110,12 +123,16 @@ where
             .map(|c| !matches!(c, '"'))
             .unwrap_or(false)
     }
+    
+    fn is_number_continuation(&self) -> bool {
+        self.chr1
+        .map(|c| matches!(c, '.' | '0'..='9' ))
+        .unwrap_or(false)
+    }
 
     fn lex_name(&mut self) -> LexResult {
         let mut name = String::new();
-
         let line = self.get_line();
-
         let start_pos = self.get_pos();
 
         loop {
@@ -156,13 +173,35 @@ where
         Ok((line, Token::String(string), (start_pos, end_pos)))
     }
 
+    fn lex_number(&mut self) -> LexResult {
+        let mut string = String::new();
+        let line = self.get_line();
+        let start_pos = self.get_pos();
+
+        loop {
+            string.push(self.chr0.expect("lex_number"));
+
+            if !self.is_number_continuation() {
+                break;
+            }
+            self.move_next_char();
+        }
+
+        self.move_next_char(); // Get end position of the last "
+        let end_pos = self.get_pos();
+
+        let number = string.parse::<i32>().expect("Error in parse number");
+
+        Ok((line, Token::Number(number), (start_pos, end_pos)))
+    }
+
     fn consume_character(&mut self, c: char) -> Result<(), LexicalError> {
         match c {
             '{' => {
                 self.emit_one_character(Token::LeftBrace);
             }
             '}' => {
-                self.emit_one_character(Token::RightBracket);
+                self.emit_one_character(Token::RightBrace);
             }
             '[' => {
                 self.emit_one_character(Token::LeftBracket);
@@ -170,17 +209,17 @@ where
             ']' => {
                 self.emit_one_character(Token::RightBracket);
             }
-            '=' => {
-                self.emit_one_character(Token::Equal);
-            }
-            ';' => {
-                self.emit_one_character(Token::Semicolon);
-            }
             '(' => {
                 self.emit_one_character(Token::LeftParen);
             }
             ')' => {
                 self.emit_one_character(Token::RightParen);
+            }
+            '=' => {
+                self.emit_one_character(Token::Equal);
+            }
+            ';' => {
+                self.emit_one_character(Token::Semicolon);
             }
             '"' => {
                     let string = self.lex_string()?;

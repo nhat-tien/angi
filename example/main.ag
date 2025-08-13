@@ -1,5 +1,5 @@
-{
-   port = "3030";
+App {
+   port = 3030;
    route = [
       {
          path = "/";
