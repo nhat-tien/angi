@@ -1,6 +1,9 @@
+use std::fs;
+
 use clap::{Parser, Subcommand};
 
-use crate::parser;
+use crate::ast_parser::parser::parse;
+use crate::lexing::lexer::Lexer;
 
 /// A toy compiler
 #[derive(Parser, Debug)]
@@ -24,10 +27,17 @@ pub fn handle_command() {
      match &args.command {
         Some(Commands::Run { file_path }) => {
             let file_path = file_path.as_ref().expect("File path missing");
-            parser::parse(file_path);
+
+            let content = match fs::read_to_string(file_path) {
+                Ok(content) => content,
+                Err(err) => panic!("Cannot open file {err:?}")
+            };
+
+            let mut lexer = Lexer::new(content.chars());
+            println!("{:?}",parse(&mut lexer));
         }
         None => {
-            println!("Default subcommand");
+            println!("Command not exist");
         }
     }
 }

@@ -1,5 +1,6 @@
 
-#[derive(Debug)]
+#[allow(dead_code)]
+#[derive(Debug, PartialEq)]
 pub enum Token {
 
     LeftBrace,    // {
@@ -10,6 +11,9 @@ pub enum Token {
     RightParen,   // )
     Equal,        // =
     Semicolon,    // ;
+    Comma,        // ,
+    RightArrow,   // ->
+    Bar,          // |
     
     // Operator
     Plus, // +

@@ -1,0 +1,5 @@
+{
+    Params = String | Struct | Int;
+    json = (params: Params) -> {
+    };
+}

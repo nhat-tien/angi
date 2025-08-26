@@ -1,0 +1,12 @@
+{
+  App = struct {
+    port = Int;
+    routes = Route[]
+  };
+
+  Route = struct {
+    path = String;
+    method = "GET" | "POST";
+    handler = Lambda(Request) -> Any;
+  };
+}

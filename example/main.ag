@@ -1,13 +1,14 @@
-App {
+let
+   json = import("std.http");
+in 
+{
    port = 3030;
    route = [
       {
          path = "/";
          method = "get";
-         handler = () {
-            return "Hello world";
-         }
+         handler = () -> json("Hello world");
       }
    ]
-}
+};
 

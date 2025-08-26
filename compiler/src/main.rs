@@ -1,6 +1,6 @@
 mod lexing;
 mod command;
-mod parser;
+mod ast_parser;
 
 use command::handle_command;
 

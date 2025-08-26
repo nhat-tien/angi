@@ -1,31 +1,46 @@
+use std::str::Chars;
+
 use crate::lexing::error::LexicalError;
 use crate::lexing::token::Token;
 
-pub type PostionInLine = (i32, i32); // (startdPosition, endPosition)
-pub type LineOfCode = i32;
+pub type PostionInLine = (u32, u32); // (startdPosition, endPosition)
+pub type LineOfCode = u32;
 pub type Spanned = (LineOfCode, Token, PostionInLine);
 pub type LexResult = Result<Spanned, LexicalError>;
 
 #[derive(Debug)]
-pub struct Lexer<T>
-where
-    T: Iterator<Item = char>,
+pub struct Lexer<'a>
 {
-    chars: T,
+    chars: Chars<'a>,
     pending: Vec<Spanned>,
     chr0: Option<char>,
     chr1: Option<char>,
-    current_pos: i32,
-    current_loc: i32,
+    current_pos: u32,
+    current_loc: u32,
 }
 
-impl<T> Lexer<T>
-where
-    T: Iterator<Item = char>,
+impl<'a> Lexer<'a>
 {
-    pub fn new(chars: T) -> Self {
+    pub fn new(chars: Chars<'a>) -> Self {
         let mut lx = Lexer {
             chars,
+            pending: Vec::new(),
+            chr0: None,
+            chr1: None,
+            current_loc: 1,
+            current_pos: 0,
+        };
+
+        lx.move_next_char();
+        lx.move_next_char();
+        lx.current_pos = 1;
+
+        lx
+    }
+
+    pub fn new_from_str(str: &'static str) -> Self {
+        let mut lx = Lexer {
+            chars: str.chars(),
             pending: Vec::new(),
             chr0: None,
             chr1: None,
@@ -95,11 +110,11 @@ where
         self.chr1 = next_char;
     }
 
-    fn get_pos(&self) -> i32 {
+    fn get_pos(&self) -> u32 {
         self.current_pos
     }
 
-    fn get_line(&self) -> i32 {
+    fn get_line(&self) -> u32 {
         self.current_loc
     }
 
@@ -187,7 +202,6 @@ where
             self.move_next_char();
         }
 
-        self.move_next_char(); // Get end position of the last "
         let end_pos = self.get_pos();
 
         let number = string.parse::<i32>().expect("Error in parse number");
@@ -221,9 +235,35 @@ where
             ';' => {
                 self.emit_one_character(Token::Semicolon);
             }
+            ',' => {
+                self.emit_one_character(Token::Comma);
+            }
             '"' => {
                     let string = self.lex_string()?;
                     self.emit(string);
+            }
+            '+' => {
+                self.emit_one_character(Token::Plus);
+            }
+            '*' => {
+                self.emit_one_character(Token::Star);
+            }
+            '/' => {
+                self.emit_one_character(Token::Slash);
+            }
+            '%' => {
+                self.emit_one_character(Token::Percent);
+            }
+            '-' => {
+                if matches!(self.chr1, Some('>')) {
+                    self.emit_one_character(Token::RightArrow);
+                    self.move_next_char();
+                } else {
+                    self.emit_one_character(Token::Minus);
+                }
+            }
+            '|' => {
+                self.emit_one_character(Token::Bar);
             }
             '\n' => {
                 self.emit_one_character(Token::NewLine);
@@ -249,9 +289,7 @@ where
     }
 }
 
-impl<T> Iterator for Lexer<T>
-where
-    T: Iterator<Item = char>,
+impl Iterator for Lexer<'_>
 {
     type Item = LexResult;
 
@@ -263,4 +301,6 @@ where
             s => Some(s),
         }
     }
+
 }
+

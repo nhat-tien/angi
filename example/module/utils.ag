@@ -1,0 +1,6 @@
+{
+   Params = String;
+   handleString = (str: Params) {
+
+   }
+}
