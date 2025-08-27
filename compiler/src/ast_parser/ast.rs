@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Expr {
     Unary {
         op: Operator,
@@ -11,7 +11,14 @@ pub enum Expr {
     },
     Number(i32),
     LiteralString(String),
-    Table {},
+    Boolean(bool),
+    Table {
+        properties: Vec<Property>
+    },
+    LetIn {
+        let_part: Vec<Property>,
+        in_part: Vec<Property>,
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -20,4 +27,12 @@ pub enum Operator {
     Subtract,
     Divide,
     Multi,
+}
+
+type Indentifier = String;
+
+#[derive(Debug, PartialEq)]
+pub struct Property {
+    key: Indentifier,
+    value: Box<Expr>
 }

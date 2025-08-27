@@ -1,7 +1,5 @@
-#[allow(unused_imports)]
-use crate::lexing::token::Token;
-#[allow(unused_imports)]
-use super::lexer::{LexResult, Lexer};
+use compiler::lexing::token::Token;
+use compiler::lexing::lexer::{LexResult, Lexer};
 
 #[test]
 fn lexing_test_1() {

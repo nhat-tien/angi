@@ -27,9 +27,11 @@ pub enum Token {
     String(String),
     Number(i32),
 
-    // Keyword
+    // Reserved 
     Return,
     Import,
+    True,
+    False,
     
     NewLine,
     EndOfFile,
@@ -41,7 +43,13 @@ impl Token {
         match name {
             "return" => Some(Token::Return),
             "import" => Some(Token::Import),
+            "true" => Some(Token::True),
+            "false" => Some(Token::False),
             _ => None
         }
+    }
+
+    pub fn is_prefix_token(&self) -> bool {
+        matches!(self, Token::Plus | Token::Minus)
     }
 }

@@ -1,9 +1,6 @@
-#[allow(unused_imports)]
-use crate::ast_parser::ast::{Expr, Operator};
-#[allow(unused_imports)]
-use crate::lexing::{lexer::{LexResult, Lexer}, token::Token};
-#[allow(unused_imports)]
-use super::parser::parse;
+use compiler::ast_parser::ast::{Expr, Operator};
+use compiler::lexing::lexer::Lexer;
+use compiler::ast_parser::parser::parse;
 
 #[test]
 fn ast_test_1() {
@@ -110,5 +107,49 @@ fn ast_test_8() {
             lhs: Box::new(Expr::Number(2)),
             rhs: Box::new(Expr::Number(12)),
         }),
+    });
+}
+
+#[test]
+fn ast_test_9() {
+    let mut lex = Lexer::new_from_str("3 * (2 + 4)\n");
+    let expr = parse(&mut lex);
+    assert_eq!(expr, Expr::Binary {
+        op: Operator::Multi,
+        lhs: Box::new(Expr::Number(3)),
+        rhs: Box::new(Expr::Binary {
+            op: Operator::Add,
+            lhs: Box::new(Expr::Number(2)),
+            rhs: Box::new(Expr::Number(4)),
+        }),
+    });
+}
+
+#[test]
+fn ast_test_10() {
+    let mut lex = Lexer::new_from_str("- 100\n");
+    let expr = parse(&mut lex);
+    assert_eq!(expr, Expr::Unary {
+        op: Operator::Subtract,
+        rhs: Box::new(Expr::Number(100)),
+    });
+}
+
+
+#[test]
+fn ast_test_11() {
+    let mut lex = Lexer::new_from_str("- (1 + 3) / 2\n");
+    let expr = parse(&mut lex);
+    assert_eq!(expr, Expr::Binary {
+        op: Operator::Divide,
+        lhs: Box::new(Expr::Unary {
+            op: Operator::Subtract,
+            rhs: Box::new(Expr::Binary {
+                op: Operator::Add,
+                lhs: Box::new(Expr::Number(1)),
+                rhs: Box::new(Expr::Number(3)),
+            }),
+        }),
+        rhs: Box::new(Expr::Number(2))
     });
 }
