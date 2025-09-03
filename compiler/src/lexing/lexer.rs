@@ -259,7 +259,7 @@ impl<'a> Lexer<'a>
                     self.emit_one_character(Token::RightArrow);
                     self.move_next_char();
                 } else {
-                    self.emit_one_character(Token::Minus);
+                    self.emit_one_character(Token::Dash);
                 }
             }
             '|' => {

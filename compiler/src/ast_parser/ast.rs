@@ -13,26 +13,26 @@ pub enum Expr {
     LiteralString(String),
     Boolean(bool),
     Table {
-        properties: Vec<Property>
+        properties: Vec<AttrSet>
     },
     LetIn {
-        let_part: Vec<Property>,
-        in_part: Vec<Property>,
+        let_part: Vec<AttrSet>,
+        in_part: Vec<AttrSet>,
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Operator {
     Add,
-    Subtract,
-    Divide,
-    Multi,
+    Sub,
+    Div,
+    Mul,
 }
 
 type Indentifier = String;
 
 #[derive(Debug, PartialEq)]
-pub struct Property {
+pub struct AttrSet {
     key: Indentifier,
     value: Box<Expr>
 }

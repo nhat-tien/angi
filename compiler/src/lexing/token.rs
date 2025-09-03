@@ -17,7 +17,7 @@ pub enum Token {
     
     // Operator
     Plus, // +
-    Minus, // -
+    Dash, // -
     Star, // *
     Slash, // / 
     Percent, // %
@@ -50,6 +50,6 @@ impl Token {
     }
 
     pub fn is_prefix_token(&self) -> bool {
-        matches!(self, Token::Plus | Token::Minus)
+        matches!(self, Token::Plus | Token::Dash)
     }
 }

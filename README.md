@@ -1,13 +1,14 @@
-# Angi
+<h1 align="center">Angi</h1>
 
-## What?
+<p align="center">
+  <img src="https://img.shields.io/github/last-commit/nhat-tien/angi?style=for-the-badge"/>
+</p>
+
+## Motivation
 
 - A scripting language lua-like, simple, fast, static-typed.
 - A generate tool that generate backend-service code (transpile, meta programming?).
 - Declarative backend language (or framework???)
-
-## Why?
-
 - I love the simplicity of lua, but I want static-type.
 - I want write a server with minimal effort. Everything is built-in, hyper extendable.
 
@@ -40,4 +41,5 @@ flowchart LR
 
 ## Acknowledgement
 
-- I learn how to write a lexer from [Gleam Project](https://github.com/gleam-lang/gleam)
+- I learn how to write a lexer from [gleam-lang/gleam](https://github.com/gleam-lang/gleam)
+- VM implement: [Stumblinbear/register-vm.rs](https://github.com/Stumblinbear/register-vm.rs) 

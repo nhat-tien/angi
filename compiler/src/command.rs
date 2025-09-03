@@ -35,6 +35,7 @@ pub fn handle_command() {
 
             let mut lexer = Lexer::new(content.chars());
             println!("{:?}",parse(&mut lexer));
+
         }
         None => {
             println!("Command not exist");
