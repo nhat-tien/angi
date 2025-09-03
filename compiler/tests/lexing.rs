@@ -1,5 +1,5 @@
-use compiler::lexing::token::Token;
-use compiler::lexing::lexer::{LexResult, Lexer};
+use compiler::token::Token;
+use compiler::lexer::{LexResult, Lexer};
 
 #[test]
 fn lexing_test_1() {

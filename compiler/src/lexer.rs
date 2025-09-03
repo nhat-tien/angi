@@ -1,7 +1,7 @@
 use std::str::Chars;
 
-use crate::lexing::error::LexicalError;
-use crate::lexing::token::Token;
+use crate::error::LexicalError;
+use crate::token::Token;
 
 pub type PostionInLine = (u32, u32); // (startdPosition, endPosition)
 pub type LineOfCode = u32;

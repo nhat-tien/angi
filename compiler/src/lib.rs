@@ -1,5 +1,7 @@
-pub mod lexing;
+pub mod ast;
+pub mod token;
+pub mod lexer;
+pub mod parser;
+pub mod error;
 pub mod command;
-pub mod ast_parser;
-mod console_log;
 

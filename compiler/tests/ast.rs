@@ -1,6 +1,6 @@
-use compiler::ast_parser::ast::{Expr, Operator};
-use compiler::lexing::lexer::Lexer;
-use compiler::ast_parser::parser::parse;
+use compiler::ast::{Expr, Operator};
+use compiler::lexer::Lexer;
+use compiler::parser::parse;
 
 #[test]
 fn ast_test_plus_two_num() {

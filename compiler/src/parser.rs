@@ -1,6 +1,8 @@
 use std::iter::Peekable;
-use crate::lexing::{lexer::Lexer, token::Token};
-use super::{ast::{Expr, Operator}, error::ParseError};
+use crate::lexer::Lexer;
+use crate::token::Token;
+use crate::ast::{Expr, Operator};
+use crate::error::ParseError;
 
 pub fn parse(lex: &mut Lexer) -> Result<Expr, ParseError> {
     let mut lexer = lex.peekable();

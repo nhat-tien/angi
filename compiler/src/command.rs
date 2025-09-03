@@ -2,8 +2,8 @@ use std::fs;
 
 use clap::{Parser, Subcommand};
 
-use crate::ast_parser::parser::parse;
-use crate::lexing::lexer::Lexer;
+use crate::parser::parse;
+use crate::lexer::Lexer;
 
 /// A toy compiler
 #[derive(Parser, Debug)]
