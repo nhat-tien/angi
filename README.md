@@ -43,3 +43,4 @@ flowchart LR
 
 - I learn how to write a lexer from [gleam-lang/gleam](https://github.com/gleam-lang/gleam)
 - VM implement: [Stumblinbear/register-vm.rs](https://github.com/Stumblinbear/register-vm.rs) 
+- [lambdavm/lvm](https://gitlab.com/lambdavm/lvm)

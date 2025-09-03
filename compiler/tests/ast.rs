@@ -1,4 +1,4 @@
-use compiler::ast::{Expr, Operator};
+use compiler::ast::{AttrSet, Expr, Operator};
 use compiler::lexer::Lexer;
 use compiler::parser::parse;
 
@@ -157,7 +157,12 @@ fn ast_test_11() {
 
 #[test]
 fn ast_test_12() {
-    let mut lex = Lexer::new_from_str("(2 + 4) / 3\n");
+    let mut lex = Lexer::new_from_str(r#"
+
+
+
+(2 + 4) / 3
+"#);
     let expr = parse(&mut lex);
     assert_eq!(expr, Ok(Expr::Binary {
         op: Operator::Div,
@@ -167,5 +172,33 @@ fn ast_test_12() {
             rhs: Box::new(Expr::Number(4)),
         }),
         rhs: Box::new(Expr::Number(3)),
+    }));
+}
+
+
+#[test]
+fn ast_test_table() {
+    let mut lex = Lexer::new_from_str(r#"
+    {
+       name = "Tien";
+       age = 10 + 11;
+    }
+    "#);
+    let expr = parse(&mut lex);
+    assert_eq!(expr, Ok(Expr::Table {
+        properties: vec![
+            AttrSet {
+                key: String::from("name"),
+                value: Expr::LiteralString(String::from("Tien")),
+            },
+            AttrSet {
+                key: String::from("age"),
+                value: Expr::Binary {
+                    op: Operator::Add,
+                    lhs: Box::new(Expr::Number(10)),
+                    rhs: Box::new(Expr::Number(11)),
+                },
+            } 
+        ],
     }));
 }

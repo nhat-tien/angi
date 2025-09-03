@@ -33,6 +33,6 @@ type Indentifier = String;
 
 #[derive(Debug, PartialEq)]
 pub struct AttrSet {
-    key: Indentifier,
-    value: Box<Expr>
+    pub key: Indentifier,
+    pub value: Expr
 }
