@@ -43,8 +43,8 @@ impl Token {
         match name {
             "return" => Some(Token::Return),
             "import" => Some(Token::Import),
-            "true" => Some(Token::True),
-            "false" => Some(Token::False),
+            "true"   => Some(Token::True),
+            "false"  => Some(Token::False),
             _ => None
         }
     }
