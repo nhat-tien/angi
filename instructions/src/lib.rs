@@ -1,1 +1,7 @@
-pub const OP_HALT:       u8 = 0xFF;
+
+pub enum OpCode {
+    LDC = 1, // Load Const
+    MTB,     // Make Table
+    SAT,     // Set Attribute
+    RET,     // Return 
+}
