@@ -1,13 +1,15 @@
 use std::collections::HashMap;
 
 
-#[derive(Default, Debug)]
-pub struct Tree {
-    pub value: Option<String>,
-    pub childrens: HashMap<String, Tree>,
+#[derive(Default, Debug, Clone)]
+pub struct Tree<T> {
+    pub value: Option<T>,
+    pub childrens: HashMap<String, Tree<T>>,
 }
 
-impl Tree {
+impl<T> Tree<T> 
+where T: Clone
+{
     pub fn new() -> Self {
         Tree {
             value: None,
@@ -15,7 +17,14 @@ impl Tree {
         }
     }
 
-    pub fn get(&self, arr_of_key: Vec<&str>) -> Option<String> {
+    pub fn new_with_value(value: Option<T>) -> Self {
+        Tree {
+            value,
+            childrens: HashMap::new(),
+        }
+    }
+
+    pub fn get(&self, arr_of_key: Vec<&str>) -> Option<T> {
         let mut travel = self;
 
         for key in arr_of_key {
@@ -32,7 +41,7 @@ impl Tree {
     pub fn insert(
         &mut self,
         arr_of_key: Vec<&str>,
-        value: &str,
+        value: T,
     ) -> Result<(), TreeActionError> {
 
         let mut travel = self;
@@ -44,7 +53,7 @@ impl Tree {
                 childrens: HashMap::new()
             });
             if i == last_index_of_arr_of_key {
-                travel.value = Some(value.to_string());
+                travel.value = Some(value.clone());
             };
         };
 
@@ -56,3 +65,4 @@ impl Tree {
 pub struct TreeActionError {
     pub error: String,
 }
+

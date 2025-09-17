@@ -6,6 +6,7 @@
 
 ## Motivation
 
+- Nix-for-be
 - A scripting language lua-like, simple, fast, static-typed.
 - A generate tool that generate backend-service code (transpile, meta programming?).
 - Declarative backend language (or framework???)

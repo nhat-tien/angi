@@ -13,7 +13,7 @@ pub enum Expr {
     LiteralString(String),
     Boolean(bool),
     Table {
-        properties: Vec<AttrSet>
+        fields: Vec<AttrSet>
     },
     LetIn {
         let_part: Vec<AttrSet>,

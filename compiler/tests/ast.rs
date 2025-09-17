@@ -186,7 +186,7 @@ fn ast_test_table() {
     "#);
     let expr = parse(&mut lex);
     assert_eq!(expr, Ok(Expr::Table {
-        properties: vec![
+        fields: vec![
             AttrSet {
                 key: String::from("name"),
                 value: Expr::LiteralString(String::from("Tien")),

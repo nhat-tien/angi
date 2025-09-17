@@ -58,7 +58,7 @@ pub fn expr_table(lexer: &mut Peekable<&mut Lexer>) -> Result<Expr, ParseError> 
     }
 
 
-    Ok(Expr::Table { properties: attr_set })
+    Ok(Expr::Table { fields: attr_set })
 }
 
 pub fn expr_with_bp(lexer: &mut Peekable<&mut Lexer>, min_pb: u8) -> Result<Expr, ParseError> {

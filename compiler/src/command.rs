@@ -4,6 +4,7 @@ use std::{env, fs};
 use crate::code_gen::BytecodeGen;
 use crate::parser::parse;
 use crate::lexer::Lexer;
+use vm::vm::VM;
 
 
 pub fn handle_command() {
@@ -25,7 +26,17 @@ pub fn handle_command() {
             };
 
             let mut lexer = Lexer::new(content.chars());
-            println!("{:?}",parse(&mut lexer));
+
+            let ast = match parse(&mut lexer) {
+                Ok(ast) => ast,
+                Err(err) => panic!("Err in parse {err:?}")
+            };
+
+            let mut bytecode_genaration = BytecodeGen::new();
+
+            bytecode_genaration.visit_expr(&ast);
+
+            println!("{:?}", bytecode_genaration.str_constant);
         },
         "compile" => {
             let source_file_path = &args[2];
@@ -52,6 +63,16 @@ pub fn handle_command() {
                 Err(err) => panic!("Cannot create file {err:?}")
             };
             let _ = file.write_all(&content);
+        },
+        "eval" => {
+            let source_file_path = &args[2];
+
+            let content = match fs::read_to_string(source_file_path) {
+                Ok(content) => content,
+                Err(err) => panic!("Cannot open file {err:?}")
+            };
+
+            let vm = VM::new();
         },
         _ => {
             println!("Command not exist");
