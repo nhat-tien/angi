@@ -5,4 +5,5 @@ pub mod parser;
 pub mod error;
 pub mod command;
 pub mod code_gen;
+mod debug;
 

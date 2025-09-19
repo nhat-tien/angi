@@ -1,10 +1,10 @@
 use std::fs::File;
-use std::io::Write;
+use std::io::{BufReader, Write};
 use std::{env, fs};
 use crate::code_gen::BytecodeGen;
+use crate::debug;
 use crate::parser::parse;
 use crate::lexer::Lexer;
-use vm::vm::VM;
 
 
 pub fn handle_command() {
@@ -35,8 +35,6 @@ pub fn handle_command() {
             let mut bytecode_genaration = BytecodeGen::new();
 
             bytecode_genaration.visit_expr(&ast);
-
-            println!("{:?}", bytecode_genaration.str_constant);
         },
         "compile" => {
             let source_file_path = &args[2];
@@ -54,7 +52,7 @@ pub fn handle_command() {
                 Err(err) => panic!("Err in parse {err:?}")
             };
 
-            let bytecode_genaration = BytecodeGen::new();
+            let mut bytecode_genaration = BytecodeGen::new();
 
             let content = bytecode_genaration.get_binary(&ast);
 
@@ -64,15 +62,14 @@ pub fn handle_command() {
             };
             let _ = file.write_all(&content);
         },
-        "eval" => {
+        "debug" => {
             let source_file_path = &args[2];
 
-            let content = match fs::read_to_string(source_file_path) {
-                Ok(content) => content,
-                Err(err) => panic!("Cannot open file {err:?}")
-            };
+            let f = File::open(source_file_path).expect("Cant open file");
 
-            let vm = VM::new();
+            let mut r = BufReader::new(f);
+
+            debug::debug(&mut r);
         },
         _ => {
             println!("Command not exist");
@@ -88,3 +85,4 @@ USAGE:
 COMMAND:
 "#);
 }
+
