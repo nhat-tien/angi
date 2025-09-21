@@ -18,10 +18,11 @@ pub fn debug(r: &mut BufReader<File>) {
     let ( code_offset, _) = read_u32(r);
     println!("{:<PADDING$}{}", "CODE OFFSET", code_offset);
 
-    let ( code_size, _) = read_u32(r);
+    let ( code_size, code_size_num) = read_u32(r);
     println!("{:<PADDING$}{}", "CODE SIZE", code_size);
 
     read_const(r, const_size_num);
+    read_instruction(r, code_size_num);
 }
 
 fn read_const(r: &mut BufReader<File>, mut const_size: u32) {
@@ -50,6 +51,14 @@ fn read_const(r: &mut BufReader<File>, mut const_size: u32) {
         }
 
         const_size -= 1;
+    }
+}
+
+fn read_instruction(r: &mut BufReader<File>, mut code_size: u32) {
+    while code_size > 0 {
+        let ( ins , _) = read_u32(r);
+        println!("{:<PADDING$}{}", "INS", ins);
+       code_size -= 1; 
     }
 }
 

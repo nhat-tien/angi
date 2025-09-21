@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Unary {
         op: Operator,
@@ -31,7 +31,7 @@ pub enum Operator {
 
 type Indentifier = String;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct AttrSet {
     pub key: Indentifier,
     pub value: Expr

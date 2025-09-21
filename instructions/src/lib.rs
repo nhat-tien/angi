@@ -57,7 +57,7 @@ pub fn encode_mtb(dr: u32) -> [u8; 4] {
 pub fn encode_sat(dr: u32, key_r: u32, value_r: u32) -> [u8; 4] {
     let bit = ((OpCode::SAT.to_u32() & OPCODE_MASK) << OPCODE_OFFSET)
     | ((dr & REG_MASK) << (REG_BITS*2))
-    | ((key_r & REG_MASK) << CONST_BITS)
+    | ((key_r & REG_MASK) << REG_BITS)
     | (value_r & REG_MASK);
 
     bit.to_be_bytes()
@@ -68,6 +68,13 @@ pub fn encode_mtk(dr: u32, thunk_idx: u32) -> [u8; 4] {
     let bit = ((OpCode::MTK.to_u32() & OPCODE_MASK) << OPCODE_OFFSET)
     | ((dr & REG_MASK) << (CONST_BITS))
     | (thunk_idx & CONST_MASK);
+
+    bit.to_be_bytes()
+}
+
+pub fn encode_ret(dr: u32) -> [u8; 4] {
+    let bit = ((OpCode::RET.to_u32() & OPCODE_MASK) << OPCODE_OFFSET)
+    | (dr & REG_MASK);
 
     bit.to_be_bytes()
 }
