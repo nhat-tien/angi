@@ -1,4 +1,6 @@
 use std::{fs::File, io::{BufReader, Read}};
+
+use instructions::extract_opcode;
 const PADDING: usize = 16;
 
 pub fn debug(r: &mut BufReader<File>) {
@@ -15,6 +17,12 @@ pub fn debug(r: &mut BufReader<File>) {
     let ( const_size, const_size_num) = read_u32(r);
     println!("{:<PADDING$}{}", "CONST SIZE", const_size);
 
+    let ( thunk_offset, _) = read_u32(r);
+    println!("{:<PADDING$}{}", "THUNK OFFSET", thunk_offset);
+
+    let ( thunk_size, thunk_size_num) = read_u32(r);
+    println!("{:<PADDING$}{}", "THUNK SIZE", thunk_size);
+
     let ( code_offset, _) = read_u32(r);
     println!("{:<PADDING$}{}", "CODE OFFSET", code_offset);
 
@@ -22,30 +30,35 @@ pub fn debug(r: &mut BufReader<File>) {
     println!("{:<PADDING$}{}", "CODE SIZE", code_size);
 
     read_const(r, const_size_num);
+    read_thunk(r, thunk_size_num);
     read_instruction(r, code_size_num);
 }
 
 fn read_const(r: &mut BufReader<File>, mut const_size: u32) {
     while const_size > 0 {
         let ( const_type, const_type_u32) = read_u8(r);
-        println!("{:<PADDING$}{}", "CONST TYPE", const_type);
+        print!("{:<PADDING$}{}", "CONST TYPE", const_type);
         
         match const_type_u32 {
             0_u8 => { 
+                println!(": int");
                 let (number_in_b, num) = read_i64(r);
                 println!("{:<PADDING$}{} : {}", "INT", number_in_b, num);
             },
             // STRING
             1_u8 => {
+                println!(": string");
                 let ( str_len_in_b, mut str_len) = read_u32(r);
-                println!("{:<PADDING$}{}", "STRING LEN", str_len_in_b);
+                let mut string = String::from("");
+                println!("{:<PADDING$}{}: {}", "STRING LEN", str_len_in_b, str_len);
                 print!("{:<PADDING$}", "STRING");
                 while str_len > 0 {
-                    let (char, _) = read_u8(r);
+                    let (char, char_u8) = read_u8(r);
                     print!("{} ", char);
                     str_len -= 1;
+                    string.push(char_u8 as char);
                 }
-                println!();
+                println!(": {}", string);
             },
             _ => panic!("Not implent const_type")
         }
@@ -54,10 +67,19 @@ fn read_const(r: &mut BufReader<File>, mut const_size: u32) {
     }
 }
 
+fn read_thunk(r: &mut BufReader<File>, mut thunk_size: u32) {
+    while thunk_size > 0 {
+        let ( thunk, _) = read_u32(r);
+        println!("{:<PADDING$}{}", "THUNK", thunk);
+        thunk_size -= 1;
+    }
+}
+
 fn read_instruction(r: &mut BufReader<File>, mut code_size: u32) {
     while code_size > 0 {
-        let ( ins , _) = read_u32(r);
-        println!("{:<PADDING$}{}", "INS", ins);
+        let ( ins , number ) = read_u32(r);
+        let opcode = extract_opcode(number).unwrap();
+        println!("{:<PADDING$}{}: {:?}", "INS", ins, opcode);
        code_size -= 1; 
     }
 }

@@ -1,7 +1,8 @@
-use crate::ast::{AttrSet, Expr, Operator};
+use crate::ast::{Expr, Operator};
 use crate::error::ParseError;
 use crate::lexer::Lexer;
 use crate::token::Token;
+use std::collections::HashMap;
 use std::iter::Peekable;
 
 pub fn parse(lex: &mut Lexer) -> Result<Expr, ParseError> {
@@ -11,7 +12,7 @@ pub fn parse(lex: &mut Lexer) -> Result<Expr, ParseError> {
 }
 
 pub fn expr_table(lexer: &mut Peekable<&mut Lexer>) -> Result<Expr, ParseError> {
-    let mut attr_set: Vec<AttrSet> = vec![];
+    let mut attr_set: HashMap<String, Expr> = HashMap::new();
     skip_new_line(lexer);
     loop {
 
@@ -51,12 +52,8 @@ pub fn expr_table(lexer: &mut Peekable<&mut Lexer>) -> Result<Expr, ParseError> 
             });
         }
 
-        attr_set.push(AttrSet {
-            key: name,
-            value: rhs
-        });
+        attr_set.insert(name, rhs);
     }
-
 
     Ok(Expr::Table { fields: attr_set })
 }

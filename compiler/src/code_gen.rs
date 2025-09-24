@@ -8,14 +8,16 @@ pub enum Constant {
     String(String),
 }
 
+#[derive(Clone)]
 pub struct Thunk {
     pub expr: Expr,
+    pub offset: u32
 }
 
 #[derive(Default)]
 pub struct BytecodeGen {
     pub constants: Vec<Constant>,
-    pub thunk: Vec<Thunk>,
+    pub thunks: Vec<Thunk>,
     pub code_offset: u32,
     pub ins_count: u32,
     pub register_in_used: [bool; 16],
@@ -26,7 +28,7 @@ impl BytecodeGen {
     pub fn new() -> Self {
         BytecodeGen {
             constants: vec![],
-            thunk: vec![],
+            thunks: vec![],
             code_offset: 0,
             ins_count: 0,
             register_in_used: [false; 16],
@@ -55,18 +57,18 @@ impl BytecodeGen {
             let reg_table = self.get_register().expect("Error in get register: table");
             self.emit_ins(instructions::encode_mtb(reg_table.into()));
 
-            for field in fields {
+            for (key, value)in fields.iter() {
                 let reg_key = self.get_register().expect("Error in get register: the key");
                 let reg_value = self.get_register().expect("Error in get register: the value");
 
-                let idx_const = self.make_const(Constant::String(field.key.clone()));
+                let idx_const = self.make_const(Constant::String(key.clone()));
 
                 self.emit_ins(instructions::encode_ldc(
                     reg_key as u32,
                     idx_const.try_into().expect("Error when convert idx_const to u32"),
                 ));
 
-                match &field.value {
+                match &value {
                     Expr::Number(num) => {
                         let idx_const = self.make_const(Constant::Number(*num));
                         self.emit_ins(instructions::encode_ldc(
@@ -82,7 +84,7 @@ impl BytecodeGen {
                         ));
                     },
                     Expr::Table { .. } => {
-                        let idx_thunk = self.make_thunk(field.value.clone());
+                        let idx_thunk = self.make_thunk(value.clone());
                         self.emit_ins(instructions::encode_mtk(
                             reg_value as u32,
                             idx_thunk.try_into().expect("Error when convert idx_const to u32"),
@@ -108,13 +110,19 @@ impl BytecodeGen {
         }
     }
 
+    pub fn visit_thunk() {
+        todo!()
+    }
+
     pub fn get_binary(&mut self, expr: &crate::ast::Expr) -> Vec<u8> {
         self.visit_table(expr);
+        self.add_thunk_code();
         self.calculate_the_code_offset();
 
         let mut bytes = vec![];
         self.add_header_to_binary(&mut bytes);
         self.add_const_to_binary(&mut bytes);
+        self.add_thunk_table_to_binary(&mut bytes);
         self.add_ins_code_to_binary(&mut bytes);
 
         bytes
@@ -139,14 +147,39 @@ impl BytecodeGen {
     pub fn add_header_to_binary(&self,bytes: &mut Vec<u8>) {
         bytes.extend_from_slice(&MAGIC_NUMBER.to_be_bytes());
         bytes.extend_from_slice(&VERSION.to_be_bytes());
-        bytes.extend_from_slice(&20_u32.to_be_bytes());                        // const offset in byte
+
+        bytes.extend_from_slice(&24_u32.to_be_bytes());                        // const offset in byte
         bytes.extend_from_slice(&(self.constants.len() as u32).to_be_bytes()); // const size
-        bytes.extend_from_slice(&(self.code_offset.to_be_bytes()));            // code offset in byte
-        bytes.extend_from_slice(&self.ins_count.to_be_bytes());                       // code size
+        
+        bytes.extend_from_slice(&(self.code_offset.to_be_bytes()));            // thunk_table offset in byte
+        bytes.extend_from_slice(&(self.thunks.len() as u32).to_be_bytes());     // thunk_table size
+        
+        bytes.extend_from_slice(&(
+            self.code_offset + (self.thunks.len() as u32 * 4)
+        ).to_be_bytes());                                                      // code offset in byte
+        bytes.extend_from_slice(&self.ins_count.to_be_bytes());                // code size
     }
 
     pub fn add_ins_code_to_binary(&self,bytes: &mut Vec<u8>) {
         bytes.extend_from_slice(&self.ins_code);
+    }
+
+    pub fn add_thunk_table_to_binary(&mut self, bytes: &mut Vec<u8>) {
+        for thunk in &self.thunks {
+             bytes.extend_from_slice(&thunk.offset.to_be_bytes());                // code size
+        }
+    }
+
+    pub fn add_thunk_code(&mut self) {
+        for (idx, thunk) in self.thunks.clone().into_iter().enumerate() {
+            match thunk.expr {
+                Expr::Table { .. } => {
+                    self.set_offset_thunk(idx, self.ins_count + 1);
+                    self.visit_table(&thunk.expr);
+                },
+                _ => panic!("Not Impliment Yet")
+            }
+        }
     }
 
     pub fn calculate_the_code_offset(&mut self) {
@@ -164,9 +197,16 @@ impl BytecodeGen {
     }
 
     pub fn make_thunk(&mut self, expr: Expr) -> usize {
-        let idx = self.thunk.len();
-        self.thunk.push(Thunk { expr });
+        let idx = self.thunks.len();
+        self.thunks.push(Thunk {
+            expr,
+            offset: 0
+        });
         idx
+    }
+    pub fn set_offset_thunk(&mut self, idx: usize, offset: u32) {
+        let thunk = self.thunks.get_mut(idx).expect("Error: not found thunk at index");
+        thunk.offset = offset;
     }
 
     pub fn make_const(&mut self, constant: Constant) -> usize {
@@ -189,9 +229,10 @@ impl BytecodeGen {
         self.register_in_used[idx] = false;
     }
 
-    pub fn emit_ins(&mut self, bytes: [u8;4]) {
+    pub fn emit_ins(&mut self, bytes: [u8;4]) -> usize {
         self.ins_code.extend_from_slice(&bytes);
         self.ins_count += 1;
+        self.ins_count as usize
     }
 }
 

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Unary {
@@ -13,11 +15,11 @@ pub enum Expr {
     LiteralString(String),
     Boolean(bool),
     Table {
-        fields: Vec<AttrSet>
+        fields: HashMap<Indentifier, Expr>
     },
     LetIn {
-        let_part: Vec<AttrSet>,
-        in_part: Vec<AttrSet>,
+        let_part: HashMap<Indentifier, Expr>,
+        in_part: HashMap<Indentifier, Expr>,
     }
 }
 
@@ -30,9 +32,3 @@ pub enum Operator {
 }
 
 type Indentifier = String;
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct AttrSet {
-    pub key: Indentifier,
-    pub value: Expr
-}

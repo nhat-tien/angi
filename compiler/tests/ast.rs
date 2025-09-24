@@ -1,4 +1,6 @@
-use compiler::ast::{AttrSet, Expr, Operator};
+use std::collections::HashMap;
+
+use compiler::ast::{Expr, Operator};
 use compiler::lexer::Lexer;
 use compiler::parser::parse;
 
@@ -185,20 +187,16 @@ fn ast_test_table() {
     }
     "#);
     let expr = parse(&mut lex);
+
     assert_eq!(expr, Ok(Expr::Table {
-        fields: vec![
-            AttrSet {
-                key: String::from("name"),
-                value: Expr::LiteralString(String::from("Tien")),
-            },
-            AttrSet {
-                key: String::from("age"),
-                value: Expr::Binary {
+        fields: HashMap::from([
+            (String::from("name"), Expr::LiteralString(String::from("Tien")) ),
+            (String::from("age"),
+                Expr::Binary {
                     op: Operator::Add,
                     lhs: Box::new(Expr::Number(10)),
                     rhs: Box::new(Expr::Number(11)),
-                },
-            } 
-        ],
+                }),
+        ])
     }));
 }

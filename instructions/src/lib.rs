@@ -1,26 +1,46 @@
-
-#[repr(u8)]
-pub enum OpCode {
-    LDC = 1, // Load Const
-    LIM,     // Load immediately
-    MTB,     // Make Table
-    SAT,     // Set Attribute
-    MTK,     // Make thunk
-    RET,     // Return 
-}
-
-impl OpCode {
-    pub fn to_u32(self) -> u32 {
-        self as u32
-    }
-
-    pub fn from_u32(op: u32) -> Option<OpCode> {
-        match op {
-            1 => Some(OpCode::LDC),
-            _ => None
+macro_rules! define_opcodes {
+    (
+        $( $name:ident = $val:expr, )*
+    ) => {
+        #[repr(u8)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        pub enum OpCode {
+            $(
+                $name = $val,
+            )*
         }
-    }
+
+        impl OpCode {
+            pub fn from_u8(n: u8) -> Option<Self> {
+                match n {
+                    $(
+                        $val => Some(OpCode::$name),
+                    )*
+                    _ => None,
+                }
+            }
+
+            pub fn to_u8(self) -> u8 {
+                self as u8
+            }
+
+            pub fn to_u32(self) -> u32 {
+                self as u32
+            }
+        }
+    };
 }
+
+
+define_opcodes! {
+    LDC = 1, // Load Const
+    LIM = 2,     // Load immediately
+    MTB = 3,     // Make Table
+    SAT = 4,     // Set Attribute
+    MTK = 5,     // Make thunk
+    RET = 6,     // Return 
+}
+
 
 // pub const MAGIC_NUMBER_LENGTH: u8 = 32;
 // pub const VERSION_LENGTH: u8 = 32;
@@ -77,5 +97,10 @@ pub fn encode_ret(dr: u32) -> [u8; 4] {
     | (dr & REG_MASK);
 
     bit.to_be_bytes()
+}
+
+pub fn extract_opcode(byte: u32) -> Option<OpCode> {
+    let bit = byte >> OPCODE_OFFSET;
+    OpCode::from_u8(bit as u8)
 }
 
