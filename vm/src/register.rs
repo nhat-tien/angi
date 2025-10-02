@@ -1,5 +1,5 @@
-use crate::tree::Tree;
-use crate::value::Value;
+use super::tree::Tree;
+use super::value::Value;
 
 pub const NREG: usize = 16;
 

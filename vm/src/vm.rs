@@ -1,67 +1,84 @@
-use crate::register::Register;
+use std::collections::HashMap;
 
-struct MetaData {
-    magic_code: u32,
-    version: u32,
-    const_offset: u32,
-    const_size: u32,
-    thunk_offset: u32,
-    thunk_size: u32,
-    code_offset: u32,
-    code_size: u32
-}
+use crate::constant::Constant;
+use crate::error::RuntimeError;
+use crate::metadata::MetaData;
+use crate::register::Register;
+use crate::utils::read_u32;
 
 pub struct VM {
+    metadata: MetaData,
     registers: Register,
+    const_pool: HashMap<usize, Constant>,
     bytes: Vec<u8>,
-    cursor: usize
+    cursor: usize,
 }
 
 impl VM {
     pub fn new() -> Self {
         VM {
             registers: Register::new(),
+            const_pool: HashMap::new(),
             bytes: vec![],
-            cursor: 0
+            cursor: 0,
+            metadata: MetaData::default(),
         }
     }
 
-    pub fn load(&mut self, bytes: Vec<u8>) {
+    pub fn load(&mut self, bytes: Vec<u8>) -> Result<(), RuntimeError> {
         self.bytes = bytes;
+        self.load_metadata()?;
+        Ok(())
     }
 
     pub fn eval(&self, attribute: String) {
         let attr_arr = attribute.split('.');
     }
 
-    pub fn read_i64(&mut self) -> Option<i64> {
-        if let Some(slice) = self.bytes.get(self.cursor..self.cursor+8).and_then(|s| s.try_into().ok()) {
-            let arr_of_bytes: [u8; 8] = slice;
-            self.cursor += 8;
-            Some(i64::from_be_bytes(arr_of_bytes))
-        } else {
-            None
-        }
+    pub fn load_metadata(&mut self) -> Result<(), RuntimeError> {
+        let magic_code = read_u32(&self.bytes, &mut self.cursor).ok_or_else(|| RuntimeError {
+            message: "Error in get magic code".into(),
+        })?;
+        let version = read_u32(&self.bytes, &mut self.cursor).ok_or_else(|| RuntimeError {
+            message: "Error in get version".into(),
+        })?;
+        let const_offset = read_u32(&self.bytes, &mut self.cursor).ok_or_else(|| RuntimeError {
+            message: "Error in get const_offset".into(),
+        })?;
+        let const_size = read_u32(&self.bytes, &mut self.cursor).ok_or_else(|| RuntimeError {
+            message: "Error in get const_size".into(),
+        })?;
+        let thunk_offset = read_u32(&self.bytes, &mut self.cursor).ok_or_else(|| RuntimeError {
+            message: "Error in get thunk_offset".into(),
+        })?;
+        let thunk_size = read_u32(&self.bytes, &mut self.cursor).ok_or_else(|| RuntimeError {
+            message: "Error in get thunk_size".into(),
+        })?;
+        let code_offset = read_u32(&self.bytes, &mut self.cursor).ok_or_else(|| RuntimeError {
+            message: "Error in get code_offset".into(),
+        })?;
+        let code_size = read_u32(&self.bytes, &mut self.cursor).ok_or_else(|| RuntimeError {
+            message: "Error in code_size".into(),
+        })?;
+
+        self.metadata = MetaData {
+            magic_code,
+            version,
+            const_offset,
+            const_size,
+            thunk_offset,
+            thunk_size,
+            code_offset,
+            code_size,
+        };
+        Ok(())
     }
 
-    pub fn read_u32(&mut self) -> Option<u32> {
-        if let Some(slice) = self.bytes.get(self.cursor..self.cursor+8).and_then(|s| s.try_into().ok()) {
-            let arr_of_bytes: [u8; 4] = slice;
-            self.cursor += 4;
-            Some(u32::from_be_bytes(arr_of_bytes))
-        } else {
-            None
-        }
+    pub fn get_metadata(&self) -> MetaData {
+        self.metadata
     }
 
-    pub fn read_u8(&mut self) -> Option<u8> {
-        if let Some(slice) = self.bytes.get(self.cursor..self.cursor+8).and_then(|s| s.try_into().ok()) {
-            let arr_of_bytes: [u8; 1] = slice;
-            self.cursor += 4;
-            Some(u8::from_be_bytes(arr_of_bytes))
-        } else {
-            None
-        }
+    pub fn get_const() {
     }
 }
 

@@ -28,12 +28,13 @@ macro_rules! define_opcodes {
                 self as u32
             }
         }
+
     };
 }
 
 
 define_opcodes! {
-    LDC = 1, // Load Const
+    LDC = 1,     // Load Const
     LIM = 2,     // Load immediately
     MTB = 3,     // Make Table
     SAT = 4,     // Set Attribute

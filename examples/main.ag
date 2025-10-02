@@ -2,5 +2,8 @@
    port = 3030;
    response = {
       message = "Hello";
+      handler = {
+         response = "Love you";
+      };
    };
 }

@@ -1,6 +1,10 @@
 use std::fs::File;
 use std::io::{BufReader, Write};
 use std::{env, fs};
+
+use vm::error::RuntimeError;
+use vm::vm::VM;
+
 use crate::code_gen::BytecodeGen;
 use crate::debug;
 use crate::parser::parse;
@@ -18,23 +22,36 @@ pub fn handle_command() {
 
     match args[1].as_str() {
         "run" => {
-            let file_path = &args[2];
+            // let file_path = &args[2];
+            //
+            // let content = match fs::read_to_string(file_path) {
+            //     Ok(content) => content,
+            //     Err(err) => panic!("Cannot open file {err:?}")
+            // };
+            //
+            // let mut lexer = Lexer::new(content.chars());
+            //
+            // let ast = match parse(&mut lexer) {
+            //     Ok(ast) => ast,
+            //     Err(err) => panic!("Err in parse {err:?}")
+            // };
+            //
+            // let mut bytecode_genaration = BytecodeGen::new();
+            //
+            // bytecode_genaration.visit_expr(&ast);
+            //
 
-            let content = match fs::read_to_string(file_path) {
-                Ok(content) => content,
-                Err(err) => panic!("Cannot open file {err:?}")
+            let source_file_path = &args[2];
+
+            let f = fs::read(source_file_path).expect("Cant open file");
+
+            let mut vm = VM::new();
+
+            if let Err(RuntimeError { message }) = vm.load(f) {
+                panic!("{}", message);
             };
 
-            let mut lexer = Lexer::new(content.chars());
-
-            let ast = match parse(&mut lexer) {
-                Ok(ast) => ast,
-                Err(err) => panic!("Err in parse {err:?}")
-            };
-
-            let mut bytecode_genaration = BytecodeGen::new();
-
-            bytecode_genaration.visit_expr(&ast);
+            println!("VM: {:?}",vm.get_metadata())
         },
         "compile" => {
             let source_file_path = &args[2];
@@ -54,7 +71,7 @@ pub fn handle_command() {
 
             let mut bytecode_genaration = BytecodeGen::new();
 
-            let content = bytecode_genaration.get_binary(&ast);
+            let content = bytecode_genaration.get_binary(ast);
 
             let mut file = match File::create(dist_file_path) {
                 Ok(file) => file,

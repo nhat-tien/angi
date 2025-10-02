@@ -1,4 +1,8 @@
-pub mod vm;
-pub mod tree;
+pub mod error;
+pub mod metadata;
 pub mod register;
-mod value;
+pub mod tree;
+pub mod utils;
+pub mod value;
+pub mod vm;
+mod constant;

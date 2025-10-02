@@ -5,7 +5,7 @@ use vm::tree::Tree;
 fn test_init_tree() {
     let mut tree = Tree::new();
     tree.insert(vec!["port", "number"], "kcsjdn").expect("Test fail");
-    assert_eq!(tree.get(vec!["port", "number"]), Some("kcsjdn".into()))
+    assert_eq!(tree.get(vec!["port", "number"]), Some("kcsjdn"))
 }
 
 

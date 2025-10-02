@@ -1,8 +1,11 @@
+use std::collections::HashMap;
+
 use crate::ast::Expr;
 
 pub const MAGIC_NUMBER: u32 = 0x414E4749; // "ANGI"
 pub const VERSION: u32 = 0x00000001; // "0.0.1"
 
+#[derive(Eq, Hash, PartialEq, Debug)]
 pub enum Constant {
     Number(i32),
     String(String),
@@ -16,7 +19,7 @@ pub struct Thunk {
 
 #[derive(Default)]
 pub struct BytecodeGen {
-    pub constants: Vec<Constant>,
+    pub constants: HashMap<Constant, usize>,
     pub thunks: Vec<Thunk>,
     pub code_offset: u32,
     pub ins_count: u32,
@@ -27,7 +30,7 @@ pub struct BytecodeGen {
 impl BytecodeGen {
     pub fn new() -> Self {
         BytecodeGen {
-            constants: vec![],
+            constants: HashMap::new(),
             thunks: vec![],
             code_offset: 0,
             ins_count: 0,
@@ -39,7 +42,6 @@ impl BytecodeGen {
     pub fn visit_expr(&mut self, expr: &crate::ast::Expr) {
         match expr {
             Expr::Table { .. } => {
-
             }
             Expr::LiteralString(str) => {
                 self.make_const(Constant::String(str.clone()));
@@ -51,13 +53,13 @@ impl BytecodeGen {
         }
     }
 
-    fn visit_table(&mut self, expr: &crate::ast::Expr) {
+    fn visit_table(&mut self, expr: crate::ast::Expr) {
         if let Expr::Table { fields } = expr {
 
             let reg_table = self.get_register().expect("Error in get register: table");
             self.emit_ins(instructions::encode_mtb(reg_table.into()));
 
-            for (key, value)in fields.iter() {
+            for (key, value) in fields.iter() {
                 let reg_key = self.get_register().expect("Error in get register: the key");
                 let reg_value = self.get_register().expect("Error in get register: the value");
 
@@ -114,7 +116,7 @@ impl BytecodeGen {
         todo!()
     }
 
-    pub fn get_binary(&mut self, expr: &crate::ast::Expr) -> Vec<u8> {
+    pub fn get_binary(&mut self, expr: crate::ast::Expr) -> Vec<u8> {
         self.visit_table(expr);
         self.add_thunk_code();
         self.calculate_the_code_offset();
@@ -129,7 +131,11 @@ impl BytecodeGen {
     }
 
     pub fn add_const_to_binary(&mut self, bytes: &mut Vec<u8>) {
-        for constant in &self.constants {
+        let mut sort_const: Vec<(&Constant, &usize)> = self.constants.iter().collect();
+
+        sort_const.sort_by(|a, b| a.1.cmp(b.1));
+
+        for ( constant, _ )in sort_const {
             match constant {
                 Constant::Number(num) => {
                     bytes.extend_from_slice(&0_u8.to_be_bytes());
@@ -171,19 +177,21 @@ impl BytecodeGen {
     }
 
     pub fn add_thunk_code(&mut self) {
-        for (idx, thunk) in self.thunks.clone().into_iter().enumerate() {
-            match thunk.expr {
+        let mut idx = 0;
+        while idx < self.thunks.len() {
+            match self.thunks[idx].expr {
                 Expr::Table { .. } => {
                     self.set_offset_thunk(idx, self.ins_count + 1);
-                    self.visit_table(&thunk.expr);
+                    self.visit_table(self.thunks[idx].expr.clone());
                 },
                 _ => panic!("Not Impliment Yet")
             }
+           idx += 1; 
         }
     }
 
     pub fn calculate_the_code_offset(&mut self) {
-        for constant in &self.constants {
+        for constant in self.constants.keys() {
             match constant {
                 Constant::Number(_) => {
                     self.code_offset += 9; // 1 byte type + 8 byte num
@@ -210,9 +218,10 @@ impl BytecodeGen {
     }
 
     pub fn make_const(&mut self, constant: Constant) -> usize {
-        let idx = self.constants.len();
-        self.constants.push(constant);
-        idx
+        let idx = self.constants.len() + 1;
+        println!("{:?}", self.constants);
+        let result = self.constants.entry(constant).or_insert(idx);
+        *result
     }
 
     pub fn get_register(&mut self) -> Option<u8> {
