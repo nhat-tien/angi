@@ -36,3 +36,13 @@ pub fn read_u8(bytes: &[u8], cursor: &mut usize) -> Option<u8> {
         None
     }
 }
+
+pub fn read_str_with_len(bytes: &[u8], cursor: &mut usize, str_len: usize) -> Option<String>{
+    let mut string = String::from("");
+    for _ in  0..str_len {
+        let char_u8 = read_u8(bytes, cursor)?;
+        string.push(char_u8 as char);
+    }
+
+    Some(string)
+}

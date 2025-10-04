@@ -36,6 +36,10 @@ impl Register {
         self.regs.get(idx).cloned()
     }
 
+    pub fn set(&mut self, idx: usize, value: Value) {
+        self.regs[idx] = value;
+    }
+
     pub fn set_int(&mut self, idx: usize, int: i64) {
         self.regs[idx] = Value::Int(int);
     }

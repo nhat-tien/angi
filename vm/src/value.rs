@@ -1,3 +1,5 @@
+use crate::error::RuntimeError;
+
 use super::tree::Tree;
 
 #[derive(Debug)]
@@ -20,6 +22,17 @@ impl Clone for Value {
             Self::None => Self::None,
         }
     }
+
 } 
+
+impl Value {
+    
+    pub fn to_string(&self) -> Result<String, RuntimeError>{
+        match self {
+            Value::String(str) => Ok(str.clone()),
+            _ => Err(RuntimeError { message: "constant not string".into() })
+        }
+    }
+}
 
 
