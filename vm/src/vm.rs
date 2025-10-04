@@ -157,10 +157,10 @@ impl VM {
                     })?;
                     match constant {
                         ConstantValue::Int(int) => {
-                            self.registers.set_int(params[0] as usize, *int);
+                            self.registers.set(params[0] as usize, Value::Int(*int));
                         },
                         ConstantValue::String(str) => {
-                            self.registers.set_str(params[0] as usize, str.to_string());
+                            self.registers.set(params[0] as usize, Value::String(str.to_string()));
                         }
                     }
                 },

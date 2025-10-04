@@ -40,15 +40,36 @@ impl BytecodeGen {
         }
     }
 
-    pub fn visit_expr(&mut self, expr: &crate::ast::Expr) {
+    pub fn visit_expr(&mut self, expr: crate::ast::Expr) {
         match expr {
             Expr::Table { .. } => {
+                self.visit_table(expr);
             }
             Expr::LiteralString(str) => {
-                self.make_const(Constant::String(str.clone()));
+                let reg = self.get_register().expect("Error in get register");
+                let const_idx = self.make_const(Constant::String(str.clone()));
+
+                self.emit_ins(OpCode::LDC.encode(vec![
+                    reg as u32,
+                    const_idx.try_into().expect("Error when convert idx_const to u32"),
+                ]));
+
+                self.emit_ins(OpCode::RET.encode(vec![
+                    reg as u32,
+                ]));
             }
             Expr::Number(num) => {
-                self.make_const(Constant::Number(*num));
+                let reg = self.get_register().expect("Error in get register");
+                let const_idx = self.make_const(Constant::Number(num));
+
+                self.emit_ins(OpCode::LDC.encode(vec![
+                    reg as u32,
+                    const_idx.try_into().expect("Error when convert idx_const to u32"),
+                ]));
+
+                self.emit_ins(OpCode::RET.encode(vec![
+                    reg as u32,
+                ]));
             }
             _ => panic!("Not implement yet"),
         }
@@ -118,7 +139,7 @@ impl BytecodeGen {
     }
 
     pub fn get_binary(&mut self, expr: crate::ast::Expr) -> Vec<u8> {
-        self.visit_table(expr);
+        self.visit_expr(expr);
         self.visit_remain_thunk();
 
         let mut bytes = vec![];

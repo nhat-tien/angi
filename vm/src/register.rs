@@ -40,14 +40,6 @@ impl Register {
         self.regs[idx] = value;
     }
 
-    pub fn set_int(&mut self, idx: usize, int: i64) {
-        self.regs[idx] = Value::Int(int);
-    }
-
-    pub fn set_str(&mut self, idx: usize, string: String) {
-        self.regs[idx] = Value::String(string);
-    }
-
     pub fn set_new_table(&mut self, idx: usize) {
         self.regs[idx] = Value::Table(Box::new(Tree::new()));
     }
