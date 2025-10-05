@@ -12,6 +12,7 @@ pub struct VM {
     metadata: MetaData,
     registers: Register,
     const_pool: HashMap<usize, ConstantValue>,
+    thunk_table: HashMap<usize, u32>,
     bytes: Vec<u8>,
     cursor: usize,
 }
@@ -27,6 +28,7 @@ impl VM {
         VM {
             registers: Register::new(),
             const_pool: HashMap::new(),
+            thunk_table: HashMap::new(),
             bytes: vec![],
             cursor: 0,
             metadata: MetaData::default(),
@@ -37,6 +39,7 @@ impl VM {
         self.bytes = bytes;
         self.load_metadata()?;
         self.load_const()?;
+        self.load_thunk_table()?;
         Ok(())
     }
 
@@ -46,6 +49,30 @@ impl VM {
         self.cursor = code_offset as usize;
 
         let value = self.handle_instruction()?;
+
+        Ok(value)
+    }
+
+    pub fn eval_table(&mut self, str_addr: &str) -> Result<Value, RuntimeError> {
+        let code_offset = self.metadata.code_offset;
+        self.cursor = code_offset as usize;
+        let mut value: Value = Value::None;
+
+        for key in str_addr.split('.') {
+            value = self.handle_instruction()?;
+            if let Value::Table(table) = &value {
+                match table.get(vec![key]) {
+                    Some(Value::Thunk(thunk_idx)) => {
+                        if let Some(thunk_offset) = self.thunk_table.get(&(thunk_idx as usize)) {
+                            self.cursor = (*thunk_offset + code_offset) as usize;
+                        }
+                        value = Value::Thunk(thunk_idx);
+                    },
+                    Some(n) => { value = n },
+                    None => return Err(RuntimeError { message: format!("property not found: {}", key)})
+                }
+            };
+        };
 
         Ok(value)
     }
@@ -129,6 +156,28 @@ impl VM {
         }
 
         Ok(())
+    }
+
+    pub fn load_thunk_table(&mut self) -> Result<(), RuntimeError> {
+        let thunk_size = self.metadata.thunk_size;
+        let thunk_offset = self.metadata.thunk_offset;
+
+        self.cursor = thunk_offset as usize;
+
+        for i in 1..(thunk_size + 1) {
+
+            let thunk_code_offset = read_u32(&self.bytes, &mut self.cursor).ok_or_else(|| RuntimeError {
+                message: "Error in get thunk code offset".into(),
+            })?;
+
+            self.thunk_table.insert(i as usize, thunk_code_offset * 4);
+        }
+
+        Ok(())
+    }
+
+    pub fn get_thunk_table(&self) -> HashMap<usize, u32> {
+        self.thunk_table.clone()
     }
 
     pub fn get_const(&self, idx: usize) -> Option<&ConstantValue> {

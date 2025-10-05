@@ -200,7 +200,7 @@ impl BytecodeGen {
         while idx < self.thunks.len() {
             match self.thunks[idx].expr {
                 Expr::Table { .. } => {
-                    self.set_offset_thunk(idx, self.ins_count + 1);
+                    self.set_offset_thunk(idx, self.ins_count);
                     self.visit_table(self.thunks[idx].expr.clone());
                 },
                 _ => panic!("Not Impliment Yet")

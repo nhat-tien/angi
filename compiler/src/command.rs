@@ -24,10 +24,12 @@ pub fn handle_command() {
             let source_file_path = &args[2];
             let f = fs::read(source_file_path).expect("Cant open file");
             let mut vm = VM::new();
+
             if let Err(RuntimeError { message }) = vm.load(f) {
                 panic!("{}", message);
             };
-            match vm.eval() {
+
+            match vm.eval_table("response.handler.response") {
                 Ok(value) => println!("VM: {:?}", value),
                 Err(err) => panic!("{:?}", err.message),
             }
