@@ -46,7 +46,8 @@ impl Register {
 
     pub fn set_attr_table(&mut self, idx: usize, key: String, value: Value) {
         if let Value::Table(box_to_tree) = &mut self.regs[idx] {
-            box_to_tree.childrens.entry(key).or_insert(Tree::new_with_value(Some(value)));
+            // box_to_tree.childrens.entry(key).or_insert(Tree::new_with_value(Some(value)));
+            box_to_tree.insert(vec![&key], value).ok();
         }
     }
     pub fn reset_all(&mut self) {

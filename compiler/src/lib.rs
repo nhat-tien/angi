@@ -2,8 +2,9 @@ pub mod ast;
 pub mod token;
 pub mod lexer;
 pub mod parser;
-pub mod error;
 pub mod command;
-pub mod code_gen;
+mod error;
+mod code_gen;
 mod debug;
+mod optimization;
 

@@ -9,6 +9,7 @@ use crate::code_gen::BytecodeGen;
 use crate::debug;
 use crate::lexer::Lexer;
 use crate::parser::parse;
+use crate::optimization::optimization;
 
 pub fn handle_command() {
     let args: Vec<String> = env::args().collect();
@@ -20,35 +21,12 @@ pub fn handle_command() {
 
     match args[1].as_str() {
         "run" => {
-            // let file_path = &args[2];
-            //
-            // let content = match fs::read_to_string(file_path) {
-            // Ok(content) => content,
-            // Err(err) => panic!("Cannot open file {err:?}")
-            // };
-            //
-            // let mut lexer = Lexer::new(content.chars());
-            //
-            // let ast = match parse(&mut lexer) {
-            // Ok(ast) => ast,
-            // Err(err) => panic!("Err in parse {err:?}")
-            // };
-            //
-            // let mut bytecode_genaration = BytecodeGen::new();
-            //
-            // bytecode_genaration.visit_expr(&ast);
-            //
-
             let source_file_path = &args[2];
-
             let f = fs::read(source_file_path).expect("Cant open file");
-
             let mut vm = VM::new();
-
             if let Err(RuntimeError { message }) = vm.load(f) {
                 panic!("{}", message);
             };
-
             match vm.eval() {
                 Ok(value) => println!("VM: {:?}", value),
                 Err(err) => panic!("{:?}", err.message),
@@ -65,12 +43,14 @@ pub fn handle_command() {
 
             let mut lexer = Lexer::new(content.chars());
 
-            let ast = match parse(&mut lexer) {
+            let mut ast = match parse(&mut lexer) {
                 Ok(ast) => ast,
                 Err(err) => panic!("Err in parse {err:?}"),
             };
 
             let mut bytecode_genaration = BytecodeGen::new();
+
+            optimization(&mut ast);
 
             let content = bytecode_genaration.get_binary(ast);
 

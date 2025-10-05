@@ -134,10 +134,6 @@ impl BytecodeGen {
         }
     }
 
-    pub fn visit_thunk() {
-        todo!()
-    }
-
     pub fn get_binary(&mut self, expr: crate::ast::Expr) -> Vec<u8> {
         self.visit_expr(expr);
         self.visit_remain_thunk();
@@ -211,9 +207,6 @@ impl BytecodeGen {
             }
            idx += 1; 
         }
-    }
-
-    pub fn calculate_the_code_offset(&mut self) {
     }
 
     pub fn make_thunk(&mut self, expr: Expr) -> usize {
