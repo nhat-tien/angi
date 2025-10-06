@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
-use instructions::OpCode;
+use instructions::{OpCode, MAGIC_NUMBER};
 
 use crate::ast::Expr;
 
-pub const MAGIC_NUMBER: u32 = 0x414E4749; // "ANGI"
 pub const VERSION: u32 = 0x00000001; // "0.0.1"
-const METADATA_BITS: u32 = 32;
+const METADATA_BYTES: u32 = 32;
 
 #[derive(Eq, Hash, PartialEq, Debug)]
 pub enum Constant {
@@ -26,7 +25,7 @@ pub struct BytecodeGen {
     pub thunks: Vec<Thunk>,
     pub ins_count: u32,
     pub register_in_used: [bool; 16],
-    pub ins_code: Vec<u8>
+    pub ins_code: Vec<u8>,
 }
 
 impl BytecodeGen {
@@ -143,6 +142,7 @@ impl BytecodeGen {
         self.add_const_to_binary(&mut bytes);
         self.add_thunk_table_to_binary(&mut bytes);
         self.add_ins_code_to_binary(&mut bytes);
+        self.add_footer_to_binary(&mut bytes);
 
         bytes
     }
@@ -168,14 +168,15 @@ impl BytecodeGen {
     }
 
     pub fn add_header_to_binary(&self, bytes: &mut Vec<u8>) {
+        let const_len_in_bytes = self.get_constant_len_in_bytes();
+        let thunk_offset = const_len_in_bytes + METADATA_BYTES;
+        let code_offset = thunk_offset + (self.thunks.len() as u32 * 4);
+
         bytes.extend_from_slice(&MAGIC_NUMBER.to_be_bytes());
         bytes.extend_from_slice(&VERSION.to_be_bytes());
 
-        let const_len_in_bytes = self.get_constant_len_in_bytes();
-        let thunk_offset = const_len_in_bytes + METADATA_BITS;
-        let code_offset = thunk_offset + (self.thunks.len() as u32 * 4);
 
-        bytes.extend_from_slice(&METADATA_BITS.to_be_bytes());                 // const offset in byte
+        bytes.extend_from_slice(&METADATA_BYTES.to_be_bytes());                 // const offset in byte
         bytes.extend_from_slice(&(self.constants.len() as u32).to_be_bytes()); // const size
         
         bytes.extend_from_slice(&(thunk_offset.to_be_bytes()));                // thunk_table offset in byte
@@ -185,7 +186,7 @@ impl BytecodeGen {
         bytes.extend_from_slice(&self.ins_count.to_be_bytes());                // code size
     }
 
-    pub fn add_ins_code_to_binary(&self,bytes: &mut Vec<u8>) {
+    pub fn add_ins_code_to_binary(&self, bytes: &mut Vec<u8>) {
         bytes.extend_from_slice(&self.ins_code);
     }
 
@@ -193,6 +194,19 @@ impl BytecodeGen {
         for thunk in &self.thunks {
              bytes.extend_from_slice(&thunk.offset.to_be_bytes());                // code size
         }
+    }
+
+    pub fn add_footer_to_binary(&mut self, bytes: &mut Vec<u8>) {
+        let const_len_in_bytes = self.get_constant_len_in_bytes();
+
+        let mut total_byte: u32 = 0;
+        total_byte += METADATA_BYTES;
+        total_byte += const_len_in_bytes;
+        total_byte += self.thunks.len() as u32 * 4;
+        total_byte += self.ins_count * 4;
+        total_byte += 4; // total_byte byte
+
+        bytes.extend_from_slice(&total_byte.to_be_bytes());
     }
 
     pub fn visit_remain_thunk(&mut self) {

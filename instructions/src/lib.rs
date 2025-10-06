@@ -3,6 +3,7 @@ pub enum Operand {
     ConstIdx,
 }
 
+pub const MAGIC_NUMBER: u32 = 0x414E4749; // "ANGI"
 pub const OPCODE_BITS: u32 = 8;
 pub const REG_BITS: u32 = 4;
 pub const CONST_BITS: u32 = 20;

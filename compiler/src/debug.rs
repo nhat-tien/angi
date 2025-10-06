@@ -8,6 +8,7 @@ pub fn debug(r: &mut BufReader<File>) {
     let (magic_code,_) = read_u32(r);
     println!("{:<PADDING$}{} : ANGI", "MAGIC CODE", magic_code);
 
+
     let ( version, _) = read_u32(r);
     println!("{:<PADDING$}{}", "VERSION", version);
 
@@ -32,6 +33,10 @@ pub fn debug(r: &mut BufReader<File>) {
     read_const(r, const_size_num);
     read_thunk(r, thunk_size_num);
     read_instruction(r, code_size_num);
+
+
+    let ( total_byte, total_byte_num) = read_u32(r);
+    println!("{:<PADDING$}{}: {}", "TOTAL BYTE", total_byte, total_byte_num);
 }
 
 fn read_const(r: &mut BufReader<File>, mut const_size: u32) {
