@@ -4,6 +4,12 @@
   <img src="https://img.shields.io/github/last-commit/nhat-tien/angi?style=for-the-badge"/>
 </p>
 
+## Compile
+
+```bash
+cargo build -p compiler --release
+```
+
 ## Motivation
 
 - Nix-for-be
