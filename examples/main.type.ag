@@ -1,0 +1,11 @@
+type Main = {
+   port = number;
+   response = Response;
+};
+
+type Response = {
+    message = string;
+    handler = {
+       response = string;
+    };
+}

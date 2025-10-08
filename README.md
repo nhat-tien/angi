@@ -4,10 +4,10 @@
   <img src="https://img.shields.io/github/last-commit/nhat-tien/angi?style=for-the-badge"/>
 </p>
 
-## Compile
+## Compile from source
 
 ```bash
-cargo build -p compiler --release
+cargo build -p angi --release
 ```
 
 ## Motivation
