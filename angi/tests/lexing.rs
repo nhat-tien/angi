@@ -2,7 +2,7 @@ use angi::compiler::token::Token;
 use angi::compiler::lexer::{LexResult, Lexer};
 
 #[test]
-fn lexing_test_1() {
+fn lexing_test_expr_simple() {
     let lex = Lexer::new_from_str("1 + 1");
     let tokens: Vec<LexResult> = lex.collect();
     assert_eq!(tokens, vec![
@@ -14,7 +14,7 @@ fn lexing_test_1() {
 }
 
 #[test]
-fn lexing_test_2() {
+fn lexing_test_table() {
     let lex = Lexer::new_from_str(r#"
     {
        name = "Tien";

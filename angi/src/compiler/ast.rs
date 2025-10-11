@@ -17,6 +17,9 @@ pub enum Expr {
     Table {
         fields: HashMap<Indentifier, Expr>
     },
+    List {
+        items: Vec<Expr>
+    },
     LetIn {
         let_part: HashMap<Indentifier, Expr>,
         in_part: HashMap<Indentifier, Expr>,

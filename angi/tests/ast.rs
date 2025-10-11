@@ -201,3 +201,68 @@ fn ast_test_table() {
         ])
     }));
 }
+
+
+#[test]
+fn ast_test_list_in_table() {
+    let mut lex = Lexer::new_from_str(r#"
+    {
+       name = "Tien";
+       age = [ 3, 4, 5];
+    }
+    "#);
+    let expr = parse(&mut lex);
+
+    assert_eq!(expr, Ok(Expr::Table {
+        fields: HashMap::from([
+            (String::from("name"), Expr::LiteralString(String::from("Tien")) ),
+            (String::from("age"),
+                Expr::List {
+                    items: vec![
+                        Expr::Number(3),
+                        Expr::Number(4),
+                        Expr::Number(5),
+                    ]
+                }),
+        ])
+    }));
+}
+
+#[test]
+fn ast_test_list_of_table() {
+    let mut lex = Lexer::new_from_str(r#"
+    {
+       name = "Tien";
+       age = [ 
+           {
+              path = "/";
+              message = "Loo";
+           },
+           { 
+             path = "/hello";
+             message = "Hello world";
+           }
+       ];
+    }
+    "#);
+    let expr = parse(&mut lex);
+
+    assert_eq!(expr, Ok(Expr::Table {
+        fields: HashMap::from([
+            (String::from("name"), Expr::LiteralString(String::from("Tien")) ),
+            (String::from("age"),
+                Expr::List {
+                    items: vec![
+                        Expr::Table { fields: HashMap::from([
+                            (String::from("path"), Expr::LiteralString(String::from("/")) ),
+                            (String::from("message"), Expr::LiteralString(String::from("Loo")) ),
+                        ]) },
+                        Expr::Table { fields: HashMap::from([
+                            (String::from("path"), Expr::LiteralString(String::from("/hello")) ),
+                            (String::from("message"), Expr::LiteralString(String::from("Hello world")) ),
+                        ]) }
+                    ]
+                }),
+        ])
+    }));
+}

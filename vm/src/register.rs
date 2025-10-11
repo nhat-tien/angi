@@ -50,6 +50,13 @@ impl Register {
             box_to_tree.insert(vec![&key], value).ok();
         }
     }
+
+    pub fn add_to_list(&mut self, idx: usize, value: Value) {
+        if let Value::List(list) = &mut self.regs[idx] {
+            // box_to_tree.childrens.entry(key).or_insert(Tree::new_with_value(Some(value)));
+            list.push(value);
+        }
+    }
     pub fn reset_all(&mut self) {
         self.regs = [
                 Value::None,

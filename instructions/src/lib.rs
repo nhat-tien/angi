@@ -111,6 +111,8 @@ define_opcodes! {
     SAT = { code = 4, layout = [RegAddr,RegAddr,RegAddr] },     // Set Attribute
     MTK = { code = 5, layout = [RegAddr,ConstIdx] },            // Make thunk
     RET = { code = 6, layout = [RegAddr] },                     // Return 
+    MLI = { code = 7, layout = [RegAddr] },                     // Make List
+    ADL = { code = 8, layout = [RegAddr,RegAddr] }              // Add to List
 }
 
 pub fn extract_opcode(byte: u32) -> Option<OpCode> {

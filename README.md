@@ -4,11 +4,36 @@
   <img src="https://img.shields.io/github/last-commit/nhat-tien/angi?style=for-the-badge"/>
 </p>
 
+## Example
+```
+{
+    port = 3030;
+    routes = [
+       {
+           path = "/";
+           handler = () {
+               "Hello World"
+           };
+       },
+       {
+           path = "/<id>";
+           handler = (id: int) {
+               "Hello {id}"
+           };
+       }
+    ]
+}
+```
+
 ## Compile from source
 
 ```bash
 cargo build -p angi --release
 ```
+
+## Todo
+- [ ] List value
+- [ ] Type checking
 
 ## Motivation
 

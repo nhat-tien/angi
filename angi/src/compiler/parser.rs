@@ -47,7 +47,7 @@ pub fn expr_table(lexer: &mut Peekable<&mut Lexer>) -> Result<Expr, ParseError> 
 
         if !matches!(lexer.next(), Some(Ok((_, Token::Semicolon, (_, _))))) {
             return Err(ParseError {
-                error: String::from("Expect right brace"),
+                error: String::from("Expect semicolon"),
                 location: (0, 0),
             });
         }
@@ -56,6 +56,45 @@ pub fn expr_table(lexer: &mut Peekable<&mut Lexer>) -> Result<Expr, ParseError> 
     }
 
     Ok(Expr::Table { fields: attr_set })
+}
+
+pub fn expr_list(lexer: &mut Peekable<&mut Lexer>) -> Result<Expr, ParseError> {
+    let mut items = vec![];
+    skip_new_line(lexer);
+    loop {
+
+        if let Some(Ok((_, Token::RightBracket, (_, _)))) = lexer.peek() {
+            lexer.next();
+            break;
+        }
+        if let Some(Ok((_, Token::NewLine, (_, _)))) = lexer.peek() {
+            lexer.next();
+            continue;
+        }
+
+        let rhs = expr_with_bp(lexer, 0)?;
+
+        items.push(rhs);
+
+        while let Some(Ok((_, Token::NewLine, (_, _)))) = lexer.peek() {
+            lexer.next();
+            continue;
+        }
+
+        if let Some(Ok((_, Token::RightBracket, (_, _)))) = lexer.peek() {
+            continue;
+        }
+
+        if !matches!(lexer.next(), Some(Ok((_, Token::Comma, (_, _))))) {
+            return Err(ParseError {
+                error: String::from("Expect Comma"),
+                location: (0, 0),
+            });
+        }
+
+    }
+
+    Ok(Expr::List { items })
 }
 
 pub fn expr_with_bp(lexer: &mut Peekable<&mut Lexer>, min_pb: u8) -> Result<Expr, ParseError> {
@@ -93,6 +132,7 @@ pub fn expr_with_bp(lexer: &mut Peekable<&mut Lexer>, min_pb: u8) -> Result<Expr
             }
         }
         Some(Ok((_, Token::LeftBrace, (_, _)))) => expr_table(lexer)?,
+        Some(Ok((_, Token::LeftBracket, (_, _)))) => expr_list(lexer)?,
         t => {
             return Err(ParseError {
                 error: format!("bad token, expect left {:?}", t),
@@ -107,6 +147,8 @@ pub fn expr_with_bp(lexer: &mut Peekable<&mut Lexer>, min_pb: u8) -> Result<Expr
             Some(Ok((_, Token::NewLine, (_, _)))) => break,
             Some(Ok((_, Token::RightParen, (_, _)))) => break,
             Some(Ok((_, Token::Semicolon, (_, _)))) => break,
+            Some(Ok((_, Token::Comma, (_, _)))) => break,
+            Some(Ok((_, Token::RightBracket, (_, _)))) => break,
             Some(Ok((_, Token::Plus, (_, _)))) => Operator::Add,
             Some(Ok((_, Token::Dash, (_, _)))) => Operator::Sub,
             Some(Ok((_, Token::Star, (_, _)))) => Operator::Mul,

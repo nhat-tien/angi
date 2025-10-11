@@ -7,6 +7,7 @@ pub enum Value {
     Int(i64),
     String(String),
     Table(Box<Tree<Value>>),
+    List(Vec<Value>),
     Thunk(u32),
     None
 }
@@ -19,6 +20,7 @@ impl Clone for Value {
             Self::String(arg0) => Self::String(arg0.clone()),
             Self::Table(arg0) => Self::Table(arg0.clone()),
             Self::Thunk(arg0) => Self::Thunk(*arg0),
+            Self::List(arg0) => Self::List(arg0.clone()),
             Self::None => Self::None,
         }
     }
@@ -26,7 +28,6 @@ impl Clone for Value {
 } 
 
 impl Value {
-    
     pub fn to_string(&self) -> Result<String, RuntimeError>{
         match self {
             Value::String(str) => Ok(str.clone()),

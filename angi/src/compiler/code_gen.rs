@@ -110,7 +110,14 @@ impl BytecodeGen {
                         let idx_thunk = self.make_thunk(value.clone());
                         self.emit_ins(OpCode::MTK.encode(vec![
                             reg_value as u32,
-                            idx_thunk.try_into().expect("Error when convert idx_const to u32"),
+                            idx_thunk.try_into().expect("Error when convert idx_thunk to u32"),
+                        ]));
+                    },
+                    Expr::List { .. } => {
+                        let idx_thunk = self.make_thunk(value.clone());
+                        self.emit_ins(OpCode::MTK.encode(vec![
+                            reg_value as u32,
+                            idx_thunk.try_into().expect("Error when convert idx_thunk to u32"),
                         ]));
                     },
                     expr => panic!("Error: visit_table, not implement yet {:?}", expr)
@@ -129,6 +136,55 @@ impl BytecodeGen {
             self.free_register(reg_table as usize);
             self.emit_ins(OpCode::RET.encode(vec![
                 reg_table as u32
+            ]));
+        }
+    }
+
+    fn visit_list(&mut self, expr: Expr) {
+        if let Expr::List { items } = expr {
+
+            let reg_list = self.get_register().expect("Error in get register: list");
+            self.emit_ins(OpCode::MLI.encode(vec![reg_list as u32]));
+
+            for value in items {
+                let reg_value = self.get_register().expect("Error in get register: the value");
+
+                match &value {
+                    Expr::Number(num) => {
+                        let idx_const = self.make_const(Constant::Number(*num));
+                        self.emit_ins(OpCode::LDC.encode(vec![
+                            reg_value as u32,
+                            idx_const.try_into().expect("Error when convert idx_const to u32"),
+                        ]));
+                    },
+                    Expr::LiteralString(str) => {
+                        let idx_const = self.make_const(Constant::String(str.to_string()));
+                        self.emit_ins(OpCode::LDC.encode(vec![
+                            reg_value as u32,
+                            idx_const.try_into().expect("Error when convert idx_const to u32"),
+                        ]));
+                    },
+                    Expr::Table { .. } => {
+                        let idx_thunk = self.make_thunk(value.clone());
+                        self.emit_ins(OpCode::MTK.encode(vec![
+                            reg_value as u32,
+                            idx_thunk.try_into().expect("Error when convert idx_thunk to u32"),
+                        ]));
+                    },
+                    expr => panic!("Error: visit_table, not implement yet {:?}", expr)
+                }
+
+                self.emit_ins(OpCode::ADL.encode(vec![
+                    reg_list as u32,
+                    reg_value as u32
+                ]));
+
+                self.free_register(reg_value as usize);
+            }
+
+            self.free_register(reg_list as usize);
+            self.emit_ins(OpCode::RET.encode(vec![
+                reg_list as u32
             ]));
         }
     }
@@ -216,6 +272,10 @@ impl BytecodeGen {
                 Expr::Table { .. } => {
                     self.set_offset_thunk(idx, self.ins_count);
                     self.visit_table(self.thunks[idx].expr.clone());
+                },
+                Expr::List { .. } => {
+                    self.set_offset_thunk(idx, self.ins_count);
+                    self.visit_list(self.thunks[idx].expr.clone());
                 },
                 _ => panic!("Not Impliment Yet")
             }

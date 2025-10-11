@@ -245,6 +245,10 @@ impl VM {
                     let params = OpCode::MTB.decode(ins);
                     self.registers.set_new_table(params[0] as usize);
                 }
+                OpCode::MLI => {
+                    let params = OpCode::MLI.decode(ins);
+                    self.registers.set(params[0] as usize, Value::List(vec![]));
+                }
                 OpCode::LDC => {
                     let params = OpCode::LDC.decode(ins);
                     let constant =
@@ -280,6 +284,18 @@ impl VM {
                             })?;
                     self.registers
                         .set_attr_table(table_reg as usize, key.to_string()?, value);
+                }
+                OpCode::ADL => {
+                    let params = OpCode::ADL.decode(ins);
+                    let list_reg = params[0];
+                    let value =
+                        self.registers
+                            .get(params[2] as usize)
+                            .ok_or_else(|| RuntimeError {
+                                message: "Error in get value in ADL".into(),
+                            })?;
+                    self.registers
+                        .add_to_list(list_reg as usize, value);
                 }
                 OpCode::MTK => {
                     let params = OpCode::MTK.decode(ins);

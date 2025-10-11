@@ -1,9 +1,3 @@
-//! Run with
-//!
-//! ```not_rust
-//! cargo run -p example-hello-world
-//! ```
-
 use std::sync::{Arc, Mutex};
 
 use axum::{extract::State, http::StatusCode, response::Html, routing::get, Router};
@@ -54,3 +48,5 @@ async fn handler(
 
     Ok(Html(string))
 }
+
+
