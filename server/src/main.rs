@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use axum::{extract::State, http::StatusCode, response::Html, routing::get, Router};
+use axum::{extract::State, handler::Handler, http::StatusCode, response::Html, routing::get, Router};
 use vm::{error::RuntimeError, value::Value, vm::VM};
 
 type Avm = Arc<Mutex<VM>>;
@@ -16,6 +16,8 @@ async fn main() -> Result<(), RuntimeError>{
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
         .await
         .unwrap();
+
+
     println!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app(avm)).await.unwrap();
 
@@ -49,4 +51,8 @@ async fn handler(
     Ok(Html(string))
 }
 
+fn make_handler() -> Handler {
+    return || {
 
+    }
+}

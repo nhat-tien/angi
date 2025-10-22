@@ -1,15 +1,12 @@
 let
-   json = import("std.http");
+   json = import("lib");
 in 
 {
    port = 3030;
    route = [
       {
-         path = "/";
-         method = "get";
-         handler = () { 
-           return "<h1>Hello world<h1>"
-         }
+         path = "/<id>";
+         handler = (id: int) => "<h1>{id}</h1>"
       }
    ]
 };

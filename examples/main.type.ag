@@ -1,11 +1,9 @@
 type Main = {
    port = number;
-   response = Response;
+   routes = List(Route);
 };
 
 type Response = {
-    message = string;
-    handler = {
-       response = string;
-    };
+    path = string;
+    handler = Func(id: int): string;
 }

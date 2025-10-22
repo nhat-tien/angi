@@ -11,15 +11,11 @@
     routes = [
        {
            path = "/";
-           handler = () {
-               "Hello World"
-           };
+           handler = () => "Hello world";
        },
        {
            path = "/<id>";
-           handler = (id: int) {
-               "Hello {id}"
-           };
+           handler = (id: int) => "Hello {id}";
        }
     ]
 }
@@ -30,10 +26,6 @@
 ```bash
 cargo build -p angi --release
 ```
-
-## Todo
-- [ ] List value
-- [ ] Type checking
 
 ## Motivation
 
@@ -76,3 +68,5 @@ flowchart LR
 - I learn how to write a lexer from [gleam-lang/gleam](https://github.com/gleam-lang/gleam)
 - VM implement: [Stumblinbear/register-vm.rs](https://github.com/Stumblinbear/register-vm.rs) 
 - [lambdavm/lvm](https://gitlab.com/lambdavm/lvm)
+
+
