@@ -24,11 +24,16 @@ async fn main() -> Result<(), RuntimeError>{
     Ok(())
 }
 
+// fn app(vm: Avm) -> Router {
+//
+//     Router::new()
+//         .route("/", get(handler))
+//         .with_state(vm)
+// }
 fn app(vm: Avm) -> Router {
-
     Router::new()
-        .route("/", get(handler))
-        .with_state(vm)
+    .route("/", get(handler))
+    .with_state(vm)
 }
 
 async fn handler(
@@ -51,8 +56,3 @@ async fn handler(
     Ok(Html(string))
 }
 
-fn make_handler() -> Handler {
-    return || {
-
-    }
-}

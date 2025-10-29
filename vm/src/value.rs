@@ -2,6 +2,8 @@ use crate::error::RuntimeError;
 
 use super::tree::Tree;
 
+
+
 #[derive(Debug)]
 pub enum Value {
     Int(i64),
@@ -37,3 +39,24 @@ impl Value {
 }
 
 
+pub trait FromValue: Sized {
+    fn from_value(v: Value) -> Option<Self>;
+}
+
+impl FromValue for i64 {
+    fn from_value(v: Value) -> Option<Self> {
+        match v {
+            Value::Int(int) => Some(int),
+            _ => None
+        }
+    }
+}
+
+impl FromValue for String {
+    fn from_value(v: Value) -> Option<Self> {
+        match v {
+            Value::Int(int) => Some(int),
+            _ => None
+        }
+    }
+}

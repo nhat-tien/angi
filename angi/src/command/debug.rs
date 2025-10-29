@@ -1,9 +1,99 @@
-use std::{fs::File, io::{BufReader, Read}};
+use std::fs::{self, File};
+use std::io::{BufReader, Read, Write};
 
 use instructions::extract_opcode;
+use vm::vm::VM;
+
+use crate::compiler::{code_gen::BytecodeGen, lexer::Lexer, parser::parse};
+use crate::compiler::optimization::optimization;
 const PADDING: usize = 16;
 
-pub fn debug(r: &mut BufReader<File>) {
+
+pub fn index(args: &[String]) {
+    match args[2].as_str() {
+        "lex" => {
+            let source_file_path = &args[3];
+
+            let content = match fs::read_to_string(source_file_path) {
+                Ok(content) => content,
+                Err(err) => panic!("Cannot open file {err:?}"),
+            };
+
+            for lex in Lexer::new(content.chars()) {
+                println!("{:?}", lex);
+            }
+        }
+        "ast" => {
+            let source_file_path = &args[3];
+
+            let content = match fs::read_to_string(source_file_path) {
+                Ok(content) => content,
+                Err(err) => panic!("Cannot open file {err:?}"),
+            };
+
+            let mut lexer = Lexer::new(content.chars());
+
+            let ast = match parse(&mut lexer) {
+                Ok(ast) => ast,
+                Err(err) => panic!("Err in parse {err:?}"),
+            };
+
+            print!("{:?}", ast);
+        }
+        "run" => {
+            let source_file_path = &args[3];
+
+            let mut vm = match VM::new_from_file(source_file_path) {
+                Ok(vm) => vm,
+                Err(err) => panic!("{}", err.message)
+            };
+
+            match vm.eval_table("routes") {
+                Ok(value) => println!("VM: {:?}", value),
+                Err(err) => panic!("{:?}", err.message),
+            }
+        }
+        "writebc" => {
+            let source_file_path = &args[3];
+            let dist_file_path = &args[4];
+
+            let content = match fs::read_to_string(source_file_path) {
+                Ok(content) => content,
+                Err(err) => panic!("Cannot open file {err:?}"),
+            };
+
+            let mut lexer = Lexer::new(content.chars());
+
+            let mut ast = match parse(&mut lexer) {
+                Ok(ast) => ast,
+                Err(err) => panic!("Err in parse {err:?}"),
+            };
+
+            let mut bytecode_genaration = BytecodeGen::new();
+
+            optimization(&mut ast);
+
+            let content = bytecode_genaration.get_binary(ast);
+
+            let mut file = match File::create(dist_file_path) {
+                Ok(file) => file,
+                Err(err) => panic!("Cannot create file {err:?}"),
+            };
+            let _ = file.write_all(&content);
+        }
+        "readbc" => {
+            let source_file_path = &args[3];
+            let f = File::open(source_file_path).expect("Cant open file");
+            let mut r = BufReader::new(f);
+            print_bytecode(&mut r);
+        }
+        _ => {
+            println!("Command not exist");
+        }
+    }
+}
+
+pub fn print_bytecode(r: &mut BufReader<File>) {
 
     let (magic_code,_) = read_u32(r);
     println!("{:<PADDING$}{} : ANGI", "MAGIC CODE", magic_code);

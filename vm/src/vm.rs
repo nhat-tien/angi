@@ -3,7 +3,7 @@ use crate::error::RuntimeError;
 use crate::metadata::MetaData;
 use crate::register::Register;
 use crate::utils::{read_i64, read_n_bytes_from_end_of_file, read_str_with_len, read_u32, read_u32_from_end_of_file, read_u8};
-use crate::value::Value;
+use crate::value::{FromValue, Value};
 use instructions::{extract_opcode, OpCode, MAGIC_NUMBER};
 use std::collections::HashMap;
 use std::fs::{self, File};
@@ -78,6 +78,14 @@ impl VM {
         let mut cursor = code_offset as usize;
         let value = self.handle_instruction(&mut cursor)?;
         Ok(value)
+    }
+
+    pub fn eval_as<T>(&mut self) -> Result<T, RuntimeError> where T: FromValue {
+        let code_offset = self.metadata.code_offset;
+        let mut cursor = code_offset as usize;
+        let value = self.handle_instruction(&mut cursor)?;
+
+        T::from_value(value)
     }
 
     pub fn eval_table(&mut self, str_addr: &str) -> Result<Value, RuntimeError> {

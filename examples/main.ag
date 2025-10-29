@@ -3,11 +3,11 @@
     routes = [
        {
            path = "/";
-           handler = () => "Hello world";
+           handler = "Hello world";
        },
        {
-           path = "/<id>";
-           handler = (id: int) => "Hello {id}";
+           path = "/Hello";
+           handler = "Hell tien";
        }
-    ]
+    ];
 }

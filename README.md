@@ -21,11 +21,15 @@
 }
 ```
 
-## Compile from source
+## Build from source
 
 ```bash
 cargo build -p angi --release
 ```
+
+## Docs
+
+[Documents](https://nhat-tien.github.io/angi/)
 
 ## Motivation
 
