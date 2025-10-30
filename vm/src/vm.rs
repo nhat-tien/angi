@@ -1,10 +1,13 @@
 use crate::constant::ConstantValue;
-use crate::error::RuntimeError;
+use crate::error::VmError;
 use crate::metadata::MetaData;
 use crate::register::Register;
-use crate::utils::{read_i64, read_n_bytes_from_end_of_file, read_str_with_len, read_u32, read_u32_from_end_of_file, read_u8};
+use crate::utils::{
+    read_i64, read_n_bytes_from_end_of_file, read_str_with_len, read_u8, read_u32,
+    read_u32_from_end_of_file,
+};
 use crate::value::{FromValue, Value};
-use instructions::{extract_opcode, OpCode, MAGIC_NUMBER};
+use instructions::{MAGIC_NUMBER, OpCode, extract_opcode};
 use std::collections::HashMap;
 use std::fs::{self, File};
 
@@ -29,43 +32,43 @@ impl Default for VM {
 }
 
 impl VM {
-
-    pub fn new_from_file(file_addr: &str) -> Result<Self, RuntimeError> {
+    pub fn new_from_file(file_addr: &str) -> Result<Self, VmError> {
         let mut vm = VM::default();
-        let bytes = fs::read(file_addr).map_err(|_| RuntimeError { message: "Can't read file".into() })?;
+        let bytes = fs::read(file_addr).map_err(|_| VmError::UnexpectedError {
+            message: "Can't read file".into(),
+        })?;
         vm.load(bytes)?;
         Ok(vm)
     }
 
-    pub fn new() -> Result<Self, RuntimeError> {
+    pub fn new() -> Result<Self, VmError> {
         let mut vm = VM::default();
 
-        let exe_path = match std::env::current_exe() {
-            Ok(path) => path,
-            Err(_) => return Err(RuntimeError { message: "error in get file itself".into() })
-        };
+        let exe_path = std::env::current_exe().map_err(|_| VmError::UnexpectedError {
+            message: "error in get file itself".into(),
+        })?;
 
-        let file = match File::open(&exe_path) {
-            Ok(f) => f,
-            Err(_) => return Err(RuntimeError { message: "error in open file itself".into() })
-        };
+        let file = File::open(&exe_path).map_err(|_| VmError::UnexpectedError {
+            message: "error in open file itself".into(),
+        })?;
 
-        let bytecode_size = match read_u32_from_end_of_file(&file) {
-            Ok(n) => n,
-            Err(_) => return Err(RuntimeError { message: "error in get bytecode size".into() })
-        };
+        let bytecode_size =
+            read_u32_from_end_of_file(&file).map_err(|_| VmError::UnexpectedError {
+                message: "error in get bytecode size".into(),
+            })?;
 
-        let bytes = match read_n_bytes_from_end_of_file(&file, bytecode_size as u64) {
-            Ok(n) => n,
-            Err(_) => return Err(RuntimeError { message: "error in get bytecode size".into() })
-        };
+        let bytes = read_n_bytes_from_end_of_file(&file, bytecode_size as u64).map_err(|_| {
+            VmError::UnexpectedError {
+                message: "error in get bytecode size".into(),
+            }
+        })?;
 
         vm.load(bytes)?;
 
         Ok(vm)
     }
 
-    pub fn load(&mut self, bytes: Vec<u8>) -> Result<(), RuntimeError> {
+    pub fn load(&mut self, bytes: Vec<u8>) -> Result<(), VmError> {
         self.bytes = bytes;
         self.load_metadata()?;
         self.load_const()?;
@@ -73,22 +76,17 @@ impl VM {
         Ok(())
     }
 
-    pub fn eval(&mut self) -> Result<Value, RuntimeError> {
+    pub fn eval(&mut self) -> Result<Value, VmError> {
         let code_offset = self.metadata.code_offset;
         let mut cursor = code_offset as usize;
         let value = self.handle_instruction(&mut cursor)?;
         Ok(value)
     }
 
-    pub fn eval_as<T>(&mut self) -> Result<T, RuntimeError> where T: FromValue {
-        let code_offset = self.metadata.code_offset;
-        let mut cursor = code_offset as usize;
-        let value = self.handle_instruction(&mut cursor)?;
-
-        T::from_value(value)
-    }
-
-    pub fn eval_table(&mut self, str_addr: &str) -> Result<Value, RuntimeError> {
+    pub fn eval_as<T>(&mut self, str_addr: &str) -> Result<T, VmError>
+    where
+        T: FromValue,
+    {
         let code_offset = self.metadata.code_offset;
         let mut cursor = code_offset as usize;
         let mut value: Value = Value::None;
@@ -105,7 +103,35 @@ impl VM {
                     }
                     Some(n) => value = n,
                     None => {
-                        return Err(RuntimeError {
+                        return Err(VmError::UnexpectedError {
+                            message: format!("property not found: {}", key),
+                        });
+                    }
+                }
+            };
+        }
+
+        T::from_value(value)
+    }
+
+    pub fn eval_table(&mut self, str_addr: &str) -> Result<Value, VmError> {
+        let code_offset = self.metadata.code_offset;
+        let mut cursor = code_offset as usize;
+        let mut value: Value = Value::None;
+
+        for key in str_addr.split('.') {
+            value = self.handle_instruction(&mut cursor)?;
+            if let Value::Table(table) = &value {
+                match table.get(vec![key]) {
+                    Some(Value::Thunk(thunk_idx)) => {
+                        if let Some(thunk_offset) = self.thunk_table.get(&(thunk_idx as usize)) {
+                            cursor = (*thunk_offset + code_offset) as usize;
+                        }
+                        value = Value::Thunk(thunk_idx);
+                    }
+                    Some(n) => value = n,
+                    None => {
+                        return Err(VmError::UnexpectedError {
                             message: format!("property not found: {}", key),
                         });
                     }
@@ -116,37 +142,49 @@ impl VM {
         Ok(value)
     }
 
-    pub fn load_metadata(&mut self) -> Result<(), RuntimeError> {
+    fn load_metadata(&mut self) -> Result<(), VmError> {
         let mut cursor = 0;
-        let magic_code = read_u32(&self.bytes, &mut cursor).ok_or_else(|| RuntimeError {
-            message: "Error in get magic code".into(),
-        })?;
+        let magic_code =
+            read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
+                message: "Error in get magic code".into(),
+            })?;
 
         if magic_code != MAGIC_NUMBER {
-            return Err(RuntimeError { message: "Magic code not suitable".into(),});
+            return Err(VmError::UnexpectedError {
+                message: "Magic code not
+                                                suitable"
+                    .into(),
+            });
         };
 
-        let version = read_u32(&self.bytes, &mut cursor).ok_or_else(|| RuntimeError {
-            message: "Error in get version".into(),
-        })?;
-        let const_offset = read_u32(&self.bytes, &mut cursor).ok_or_else(|| RuntimeError {
-            message: "Error in get const_offset".into(),
-        })?;
-        let const_size = read_u32(&self.bytes, &mut cursor).ok_or_else(|| RuntimeError {
-            message: "Error in get const_size".into(),
-        })?;
-        let thunk_offset = read_u32(&self.bytes, &mut cursor).ok_or_else(|| RuntimeError {
-            message: "Error in get thunk_offset".into(),
-        })?;
-        let thunk_size = read_u32(&self.bytes, &mut cursor).ok_or_else(|| RuntimeError {
-            message: "Error in get thunk_size".into(),
-        })?;
-        let code_offset = read_u32(&self.bytes, &mut cursor).ok_or_else(|| RuntimeError {
-            message: "Error in get code_offset".into(),
-        })?;
-        let code_size = read_u32(&self.bytes, &mut cursor).ok_or_else(|| RuntimeError {
-            message: "Error in code_size".into(),
-        })?;
+        let version =
+            read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
+                message: "Error in get version".into(),
+            })?;
+        let const_offset =
+            read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
+                message: "Error in get const_offset".into(),
+            })?;
+        let const_size =
+            read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
+                message: "Error in get const_size".into(),
+            })?;
+        let thunk_offset =
+            read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
+                message: "Error in get thunk_offset".into(),
+            })?;
+        let thunk_size =
+            read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
+                message: "Error in get thunk_size".into(),
+            })?;
+        let code_offset =
+            read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
+                message: "Error in get code_offset".into(),
+            })?;
+        let code_size =
+            read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
+                message: "Error in code_size".into(),
+            })?;
 
         self.metadata = MetaData {
             magic_code,
@@ -165,7 +203,7 @@ impl VM {
         self.metadata
     }
 
-    pub fn load_const(&mut self) -> Result<(), RuntimeError> {
+    pub fn load_const(&mut self) -> Result<(), VmError> {
         let const_size = self.metadata.const_size;
         let const_offset = self.metadata.const_offset;
 
@@ -173,28 +211,30 @@ impl VM {
 
         for i in 1..(const_size + 1) {
             let const_type =
-                read_u8(&self.bytes, &mut cursor).ok_or_else(|| RuntimeError {
+                read_u8(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
                     message: "Error in get const_size".into(),
                 })?;
 
             match const_type {
                 0 => {
-                    let number =
-                        read_i64(&self.bytes, &mut cursor).ok_or_else(|| RuntimeError {
+                    let number = read_i64(&self.bytes, &mut cursor).ok_or_else(|| {
+                        VmError::UnexpectedError {
                             message: "Error in get number value const".into(),
-                        })?;
+                        }
+                    })?;
 
                     self.const_pool
                         .insert(i as usize, ConstantValue::Int(number));
                 }
                 1 => {
-                    let str_len =
-                        read_u32(&self.bytes, &mut cursor).ok_or_else(|| RuntimeError {
+                    let str_len = read_u32(&self.bytes, &mut cursor).ok_or_else(|| {
+                        VmError::UnexpectedError {
                             message: "Error in get number value const".into(),
-                        })?;
+                        }
+                    })?;
 
                     let string = read_str_with_len(&self.bytes, &mut cursor, str_len as usize)
-                        .ok_or_else(|| RuntimeError {
+                        .ok_or_else(|| VmError::UnexpectedError {
                             message: "Error in get string value const".into(),
                         })?;
 
@@ -202,7 +242,7 @@ impl VM {
                         .insert(i as usize, ConstantValue::String(string));
                 }
                 _ => {
-                    return Err(RuntimeError {
+                    return Err(VmError::UnexpectedError {
                         message: format!("Unexpect const type {}, {}", const_type, i),
                     });
                 }
@@ -212,7 +252,7 @@ impl VM {
         Ok(())
     }
 
-    pub fn load_thunk_table(&mut self) -> Result<(), RuntimeError> {
+    pub fn load_thunk_table(&mut self) -> Result<(), VmError> {
         let thunk_size = self.metadata.thunk_size;
         let thunk_offset = self.metadata.thunk_offset;
 
@@ -220,7 +260,7 @@ impl VM {
 
         for i in 1..(thunk_size + 1) {
             let thunk_code_offset =
-                read_u32(&self.bytes, &mut cursor).ok_or_else(|| RuntimeError {
+                read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
                     message: "Error in get thunk code offset".into(),
                 })?;
 
@@ -238,13 +278,13 @@ impl VM {
         self.const_pool.get(&idx)
     }
 
-    pub fn handle_instruction(&mut self, cursor: &mut usize) -> Result<Value, RuntimeError> {
+    pub fn handle_instruction(&mut self, cursor: &mut usize) -> Result<Value, VmError> {
         loop {
-            let ins = read_u32(&self.bytes, cursor).ok_or_else(|| RuntimeError {
+            let ins = read_u32(&self.bytes, cursor).ok_or_else(|| VmError::UnexpectedError {
                 message: "Error in get ins value".into(),
             })?;
 
-            let opcode = extract_opcode(ins).ok_or_else(|| RuntimeError {
+            let opcode = extract_opcode(ins).ok_or_else(|| VmError::UnexpectedError {
                 message: "Error in get opcode".into(),
             })?;
 
@@ -259,12 +299,11 @@ impl VM {
                 }
                 OpCode::LDC => {
                     let params = OpCode::LDC.decode(ins);
-                    let constant =
-                        self.const_pool
-                            .get(&(params[1] as usize))
-                            .ok_or_else(|| RuntimeError {
-                                message: "Error in get constant value".into(),
-                            })?;
+                    let constant = self.const_pool.get(&(params[1] as usize)).ok_or_else(|| {
+                        VmError::UnexpectedError {
+                            message: "Error in get constant value".into(),
+                        }
+                    })?;
                     match constant {
                         ConstantValue::Int(int) => {
                             self.registers.set(params[0] as usize, Value::Int(*int));
@@ -278,32 +317,28 @@ impl VM {
                 OpCode::SAT => {
                     let params = OpCode::SAT.decode(ins);
                     let table_reg = params[0];
-                    let key =
-                        self.registers
-                            .get(params[1] as usize)
-                            .ok_or_else(|| RuntimeError {
-                                message: "Error in get key in SAT".into(),
-                            })?;
-                    let value =
-                        self.registers
-                            .get(params[2] as usize)
-                            .ok_or_else(|| RuntimeError {
-                                message: "Error in get value in SAT".into(),
-                            })?;
+                    let key = self.registers.get(params[1] as usize).ok_or_else(|| {
+                        VmError::UnexpectedError {
+                            message: "Error in get key in SAT".into(),
+                        }
+                    })?;
+                    let value = self.registers.get(params[2] as usize).ok_or_else(|| {
+                        VmError::UnexpectedError {
+                            message: "Error in get value in SAT".into(),
+                        }
+                    })?;
                     self.registers
                         .set_attr_table(table_reg as usize, key.to_string()?, value);
                 }
                 OpCode::ADL => {
                     let params = OpCode::ADL.decode(ins);
                     let list_reg = params[0];
-                    let value =
-                        self.registers
-                            .get(params[2] as usize)
-                            .ok_or_else(|| RuntimeError {
-                                message: "Error in get value in ADL".into(),
-                            })?;
-                    self.registers
-                        .add_to_list(list_reg as usize, value);
+                    let value = self.registers.get(params[2] as usize).ok_or_else(|| {
+                        VmError::UnexpectedError {
+                            message: "Error in get value in ADL".into(),
+                        }
+                    })?;
+                    self.registers.add_to_list(list_reg as usize, value);
                 }
                 OpCode::MTK => {
                     let params = OpCode::MTK.decode(ins);
@@ -313,15 +348,14 @@ impl VM {
                 }
                 OpCode::RET => {
                     let params = OpCode::RET.decode(ins);
-                    return self
-                        .registers
-                        .get(params[0] as usize)
-                        .ok_or_else(|| RuntimeError {
+                    return self.registers.get(params[0] as usize).ok_or_else(|| {
+                        VmError::UnexpectedError {
                             message: "Error in get registers value".into(),
-                        });
+                        }
+                    });
                 }
                 _ => {
-                    return Err(RuntimeError {
+                    return Err(VmError::UnexpectedError {
                         message: "Unexpect opcode".into(),
                     });
                 }

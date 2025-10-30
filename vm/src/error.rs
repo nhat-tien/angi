@@ -1,9 +1,24 @@
-pub enum VmError {
-    ValueTypeMismatch
-    No
-}
+use std::fmt;
 
 #[derive(Debug)]
-pub struct RuntimeError {
-    pub message: String
+pub enum VmError {
+    ValueTypeMismatch { 
+        message: String
+    },
+    UnexpectedError {
+        message: String 
+    },
+    InstructionExecution {
+        message: String
+    }
+}
+
+impl fmt::Display for VmError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+           VmError::ValueTypeMismatch { message } => write!(f, "{message}"),
+           VmError::UnexpectedError { message } => write!(f, "{message}"),
+           VmError::InstructionExecution{ message } => write!(f, "{message}"),
+        }
+    }
 }

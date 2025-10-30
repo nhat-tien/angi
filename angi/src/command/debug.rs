@@ -45,12 +45,12 @@ pub fn index(args: &[String]) {
 
             let mut vm = match VM::new_from_file(source_file_path) {
                 Ok(vm) => vm,
-                Err(err) => panic!("{}", err.message)
+                Err(err) => panic!("{}", err)
             };
 
             match vm.eval_table("routes") {
                 Ok(value) => println!("VM: {:?}", value),
-                Err(err) => panic!("{:?}", err.message),
+                Err(err) => panic!("{:?}", err),
             }
         }
         "writebc" => {

@@ -1,4 +1,4 @@
-use crate::{error::RuntimeError, value::Value};
+use crate::{error::VmError, value::Value};
 
 #[derive(Debug)]
 pub enum ConstantValue {
@@ -23,10 +23,10 @@ impl ConstantValue {
         }
     }
 
-    pub fn to_string(&self) -> Result<String, RuntimeError>{
+    pub fn to_string(&self) -> Result<String, VmError>{
         match self {
             ConstantValue::String(str) => Ok(str.clone()),
-            _ => Err(RuntimeError { message: "constant not string".into() })
+            _ => Err(VmError::UnexpectedError { message: "constant not string".into() })
         }
     }
 }

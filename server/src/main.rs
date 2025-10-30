@@ -1,15 +1,16 @@
 use std::sync::{Arc, Mutex};
 
 use axum::{extract::State, handler::Handler, http::StatusCode, response::Html, routing::get, Router};
-use vm::{error::RuntimeError, value::Value, vm::VM};
+use vm::{error::VmError, value::Value, vm::VM};
+use vm::value::List;
 
 type Avm = Arc<Mutex<VM>>;
 
 #[tokio::main]
-async fn main() -> Result<(), RuntimeError>{
+async fn main() -> Result<(), VmError>{
     let vm = match VM::new() {
         Ok(vm) => vm,
-        Err(err) => panic!("{}", err.message)
+        Err(_) => panic!("{}", "Can initialize he vm")
     };
     let avm = Arc::new(Mutex::new(vm));
 
@@ -31,6 +32,7 @@ async fn main() -> Result<(), RuntimeError>{
 //         .with_state(vm)
 // }
 fn app(vm: Avm) -> Router {
+
     Router::new()
     .route("/", get(handler))
     .with_state(vm)
@@ -56,3 +58,11 @@ async fn handler(
     Ok(Html(string))
 }
 
+fn build_router(vm: Avm) -> Result<Router, VmError> {
+    let mut ready_vm = vm.lock().unwrap();
+    let list_routes = ready_vm.eval_table("routes")?.val::<List>();
+
+    let router = Router::new();
+
+    Ok(router)
+}
