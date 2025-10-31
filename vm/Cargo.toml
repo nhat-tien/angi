@@ -5,3 +5,6 @@ edition = "2024"
 
 [dependencies]
 instructions = { path = "../instructions" }
+
+[dev-dependencies]
+tempfile = "3"

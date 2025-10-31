@@ -9,7 +9,7 @@ use crate::utils::{
 use crate::value::{FromValue, Value};
 use instructions::{MAGIC_NUMBER, OpCode, extract_opcode};
 use std::collections::HashMap;
-use std::fs::{self, File};
+use std::fs::File;
 
 pub struct VM {
     metadata: MetaData,

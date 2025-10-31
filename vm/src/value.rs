@@ -50,7 +50,7 @@ impl Value {
         match self {
             Value::String(str) => Ok(str.clone()),
             _ => Err(VmError::ValueTypeMismatch {
-                message: "constant not string".into(),
+                message: "value not string".into(),
             }),
         }
     }
@@ -92,5 +92,72 @@ fn generate_error_message_when_mismatch_casting(src: Value, dest: String) -> Str
     format!("Cannot casting from {src} to {dest}")
 }
 
+
+#[cfg(test)]
+mod test {
+    use crate::{error::VmError, value::Value};
+
+    #[test]
+    fn test_clone_and_display() {
+        let v1 = Value::Int(42);
+        let v2 = v1.clone();
+        assert!(matches!(v2, Value::Int(_)));
+        assert_eq!(format!("{}", v1), "Int");
+
+        let v3 = Value::String("abc".into());
+        assert_eq!(format!("{}", v3), "String");
+
+        let v4 = Value::None;
+        assert_eq!(format!("{}", v4), "None");
+    }
+
+    #[test]
+    fn test_to_string_success() {
+        let v = Value::String("hello".into());
+        assert_eq!(v.to_string().unwrap(), "hello");
+    }
+
+    #[test]
+    fn test_to_string_fail() {
+        let v = Value::Int(10);
+        let err = v.to_string().unwrap_err();
+        match err {
+            VmError::ValueTypeMismatch { message } => {
+                assert!(message.contains("value not string"));
+            }
+            _ => panic!("Unexpected error variant"),
+        }
+    }
+
+    #[test]
+    fn test_from_value_i64_success() {
+        let v = Value::Int(123);
+        let n: i64 = v.val().unwrap();
+        assert_eq!(n, 123);
+    }
+
+    #[test]
+    fn test_from_value_i64_fail() {
+        let v = Value::String("oops".into());
+        let result: Result<i64, VmError> = v.val();
+        assert!(matches!(result, Err(VmError::ValueTypeMismatch { .. })));
+    }
+
+    #[test]
+    fn test_from_value_string_success() {
+        let v = Value::String("world".into());
+        let s: String = v.val().unwrap();
+        assert_eq!(s, "world");
+    }
+
+    #[test]
+    fn test_generate_error_message() {
+        let msg = super::generate_error_message_when_mismatch_casting(
+            Value::Int(10),
+            "String".into(),
+        );
+        assert_eq!(msg, "Cannot casting from Int to String");
+    }
+}
 
 

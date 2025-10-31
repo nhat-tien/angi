@@ -72,3 +72,100 @@ pub fn read_n_bytes_from_end_of_file(mut f: &File, n: u64) -> std::io::Result<Ve
 
     Ok(buf)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::{self, Write};
+    use tempfile::tempfile;
+
+    #[test]
+    fn test_read_i64_success() {
+        let value: i64 = 1234567890123456789;
+        let bytes = value.to_be_bytes();
+        let mut cursor = 0;
+        let result = read_i64(&bytes, &mut cursor);
+        assert_eq!(result, Some(value));
+        assert_eq!(cursor, 8);
+    }
+
+    #[test]
+    fn test_read_i64_fail_short_slice() {
+        let bytes = vec![0x01, 0x02];
+        let mut cursor = 0;
+        let result = read_i64(&bytes, &mut cursor);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_read_u32_success() {
+        let value: u32 = 0xDEADBEEF;
+        let bytes = value.to_be_bytes();
+        let mut cursor = 0;
+        let result = read_u32(&bytes, &mut cursor);
+        assert_eq!(result, Some(value));
+        assert_eq!(cursor, 4);
+    }
+
+    #[test]
+    fn test_read_u8_success() {
+        let bytes = [0xAB];
+        let mut cursor = 0;
+        let result = read_u8(&bytes, &mut cursor);
+        assert_eq!(result, Some(0xAB));
+        assert_eq!(cursor, 1);
+    }
+
+    #[test]
+    fn test_read_str_with_len_success() {
+        let data = b"hello";
+        let mut cursor = 0;
+        let result = read_str_with_len(data, &mut cursor, 5);
+        assert_eq!(result, Some("hello".to_string()));
+        assert_eq!(cursor, 5);
+    }
+
+    #[test]
+    fn test_read_str_with_len_fail() {
+        let data = b"hi";
+        let mut cursor = 0;
+        let result = read_str_with_len(data, &mut cursor, 5);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_read_u32_from_end_of_file() -> io::Result<()> {
+        let mut file = tempfile()?;
+        file.write_all(b"abcd")?;
+        file.write_all(&0x11223344u32.to_be_bytes())?;
+        file.flush()?;
+
+        let result = read_u32_from_end_of_file(&file)?;
+        assert_eq!(result, 0x11223344);
+        Ok(())
+    }
+
+    #[test]
+    fn test_read_n_bytes_from_end_of_file() -> io::Result<()> {
+        let mut file = tempfile()?;
+        file.write_all(b"abcdefg")?;
+        file.flush()?;
+
+        let result = read_n_bytes_from_end_of_file(&file, 3)?;
+        assert_eq!(result, b"efg");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_read_n_bytes_from_end_of_file_too_small() -> io::Result<()> {
+        let mut file = tempfile()?;
+        file.write_all(b"abc")?;
+        file.flush()?;
+
+        let err = read_n_bytes_from_end_of_file(&file, 10).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::UnexpectedEof);
+
+        Ok(())
+    }
+}

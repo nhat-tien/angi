@@ -14,7 +14,7 @@ pub fn optimization(ast: &mut Expr) {
     }
 }
 
-pub fn calculate_expr(ast: &Expr) -> i32 {
+fn calculate_expr(ast: &Expr) -> i32 {
     match ast {
         Expr::Number(num) => *num,
         Expr::Unary { op, rhs } => {
