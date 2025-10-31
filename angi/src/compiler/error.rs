@@ -15,3 +15,11 @@ pub struct LexicalError {
     location: (i32, i32),
 }
 
+
+pub enum CompilationError {
+    IOError {
+        message: String
+    },
+    ParseError(ParseError)
+}
+

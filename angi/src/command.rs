@@ -13,7 +13,7 @@ pub fn handle_command() {
 
     match args[1].as_str() {
         "build" => {
-            build::index(&args);
+            let _ = build::index(&args);
         }
         "debug" => {
             debug::index(&args);

@@ -1,8 +1,6 @@
-pub enum Operand {
-    RegAddr,
-    ConstIdx,
-}
 
+pub const VERSION: u32 = 0x00000001; // "0.0.1"
+pub const METADATA_BYTES: u32 = 32;
 pub const MAGIC_NUMBER: u32 = 0x414E4749; // "ANGI"
 pub const OPCODE_BITS: u32 = 8;
 pub const REG_BITS: u32 = 4;
@@ -13,6 +11,11 @@ pub const OPCODE_OFFSET: u32 = 24;
 pub const OPCODE_MASK: u32 = (1 << OPCODE_BITS) - 1; // 00000000 00000000 00000000 1111_1111
 pub const REG_MASK: u32 = (1 << REG_BITS) - 1;   //     00000000 00000000 00000000 0000_1111
 pub const CONST_MASK: u32 = (1 << CONST_BITS) - 1; //   00000000 0000_1111 11111111 11111111
+
+pub enum Operand {
+    RegAddr,
+    ConstIdx,
+}
 
 macro_rules! define_opcodes {
     (

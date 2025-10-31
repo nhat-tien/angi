@@ -2,6 +2,7 @@ use std::fs::{self, File};
 use std::io::{BufReader, Read, Write};
 
 use instructions::extract_opcode;
+use vm::value::{List, Table};
 use vm::vm::VM;
 
 use crate::compiler::{code_gen::BytecodeGen, lexer::Lexer, parser::parse};
@@ -43,15 +44,21 @@ pub fn index(args: &[String]) {
         "run" => {
             let source_file_path = &args[3];
 
-            let mut vm = match VM::new_from_file(source_file_path) {
+            let bytes = fs::read(source_file_path).expect("Cant open file");
+
+            let mut vm = match VM::new_from_bytes(bytes) {
                 Ok(vm) => vm,
                 Err(err) => panic!("{}", err)
             };
 
-            match vm.eval_table("routes") {
-                Ok(value) => println!("VM: {:?}", value),
-                Err(err) => panic!("{:?}", err),
-            }
+            let list_routes = vm.eval::<List<Table>>("routes").expect("ckdsn");
+
+            for route in list_routes.iter(&mut vm) {
+                let path = route.get::<String>("path").unwrap();
+                let message = route.get::<String>("handler").unwrap();
+                println!("path {path}");
+                println!("message {message}");
+            };
         }
         "writebc" => {
             let source_file_path = &args[3];

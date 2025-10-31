@@ -16,9 +16,9 @@ pub enum VmError {
 impl fmt::Display for VmError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-           VmError::ValueTypeMismatch { message } => write!(f, "{message}"),
-           VmError::UnexpectedError { message } => write!(f, "{message}"),
-           VmError::InstructionExecution{ message } => write!(f, "{message}"),
+           VmError::ValueTypeMismatch { message } => write!(f, "[ValueTypeMismatch] {message}"),
+           VmError::UnexpectedError { message } => write!(f, "[UnexpectedError] {message}"),
+           VmError::InstructionExecution{ message } => write!(f, "[InstructionExecution] {message}"),
         }
     }
 }

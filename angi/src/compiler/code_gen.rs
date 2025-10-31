@@ -1,11 +1,12 @@
 use std::collections::HashMap;
-
-use instructions::{OpCode, MAGIC_NUMBER};
-
+use instructions::{
+    OpCode,
+    MAGIC_NUMBER,
+    METADATA_BYTES,
+    VERSION
+};
 use super::ast::Expr;
 
-pub const VERSION: u32 = 0x00000001; // "0.0.1"
-const METADATA_BYTES: u32 = 32;
 
 #[derive(Eq, Hash, PartialEq, Debug)]
 pub enum Constant {
@@ -38,6 +39,21 @@ impl BytecodeGen {
             ins_code: vec![],
         }
     }
+
+    pub fn get_binary(&mut self, expr: Expr) -> Vec<u8> {
+        self.visit_expr(expr);
+        self.visit_remain_thunk();
+
+        let mut bytes = vec![];
+        self.add_header_to_binary(&mut bytes);
+        self.add_const_to_binary(&mut bytes);
+        self.add_thunk_table_to_binary(&mut bytes);
+        self.add_ins_code_to_binary(&mut bytes);
+        self.add_footer_to_binary(&mut bytes);
+
+        bytes
+    }
+
 
     pub fn visit_expr(&mut self, expr: Expr) {
         match expr {
@@ -187,20 +203,6 @@ impl BytecodeGen {
                 reg_list as u32
             ]));
         }
-    }
-
-    pub fn get_binary(&mut self, expr: Expr) -> Vec<u8> {
-        self.visit_expr(expr);
-        self.visit_remain_thunk();
-
-        let mut bytes = vec![];
-        self.add_header_to_binary(&mut bytes);
-        self.add_const_to_binary(&mut bytes);
-        self.add_thunk_table_to_binary(&mut bytes);
-        self.add_ins_code_to_binary(&mut bytes);
-        self.add_footer_to_binary(&mut bytes);
-
-        bytes
     }
 
     pub fn add_const_to_binary(&mut self, bytes: &mut Vec<u8>) {

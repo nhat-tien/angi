@@ -62,7 +62,7 @@ impl Value {
 
 
 
-pub trait FromValue: Sized {
+pub trait FromValue: Sized + Clone {
     fn from_value(v: Value) -> Result<Self, VmError>;
 }
 
@@ -91,5 +91,6 @@ impl FromValue for String {
 fn generate_error_message_when_mismatch_casting(src: Value, dest: String) -> String {
     format!("Cannot casting from {src} to {dest}")
 }
+
 
 

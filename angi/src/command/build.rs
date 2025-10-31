@@ -4,6 +4,7 @@ use std::path::Path;
 
 static SERVER: &[u8] = include_bytes!(env!("RUNTIME_PATH"));
 
+use crate::compiler::error::CompilationError;
 use crate::compiler::{
     code_gen::BytecodeGen,
     lexer::Lexer,
@@ -11,43 +12,44 @@ use crate::compiler::{
     parser::parse,
 };
 
-pub fn index(args: &[String]) {
+pub fn index(args: &[String]) -> Result<(), CompilationError>{
     let source_file_path = &args[2];
     let dist_file_path = &args[3];
 
-    let content = match fs::read_to_string(source_file_path) {
-        Ok(content) => content,
-        Err(err) => panic!("Cannot open file {err:?}"),
-    };
+    let source = fs::read_to_string(source_file_path).map_err(|err|
+        CompilationError::IOError {
+            message: format!("Error in open source file, {err:?}"),
+        }
+    )?;
 
-    let mut lexer = Lexer::new(content.chars());
+    let mut lexer = Lexer::new(source.chars());
 
-    let mut ast = match parse(&mut lexer) {
-        Ok(ast) => ast,
-        Err(err) => panic!("Err in parse {err:?}"),
-    };
-
-    let mut bytecode_genaration = BytecodeGen::new();
+    let mut ast = parse(&mut lexer).map_err(|err| {
+        CompilationError::ParseError(err)
+    })?;
 
     optimization(&mut ast);
 
-    let content = bytecode_genaration.get_binary(ast);
+    let bytecode = BytecodeGen::new().get_binary(ast);
 
-    let mut file = match File::options()
+    let mut file = File::options()
         .create(true)
         .append(true)
         .open(dist_file_path)
-    {
-        Ok(file) => file,
-        Err(err) => panic!("Err in open file {}", err),
-    };
+        .map_err(|err| {
+            CompilationError::IOError {
+                message: format!("Err in open file {err}"),
+            }
+        })?;
 
     file.write_all(SERVER).expect("Fail to write file");
-    file.write_all(&content).expect("Fail to write file");
+    file.write_all(&bytecode).expect("Fail to write file");
     file.flush().expect("Fail to flush");
 
     let path = Path::new(&dist_file_path);
     make_file_executable(path).expect("Fail to make file executable");
+
+    Ok(())
 }
 
 

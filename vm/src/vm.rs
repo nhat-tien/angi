@@ -32,16 +32,14 @@ impl Default for VM {
 }
 
 impl VM {
-    pub fn new_from_file(file_addr: &str) -> Result<Self, VmError> {
+
+    pub fn new_from_bytes(bytes: Vec<u8>) -> Result<Self, VmError> {
         let mut vm = VM::default();
-        let bytes = fs::read(file_addr).map_err(|_| VmError::UnexpectedError {
-            message: "Can't read file".into(),
-        })?;
         vm.load(bytes)?;
         Ok(vm)
     }
 
-    pub fn new() -> Result<Self, VmError> {
+    pub fn new_from_itself() -> Result<Self, VmError> {
         let mut vm = VM::default();
 
         let exe_path = std::env::current_exe().map_err(|_| VmError::UnexpectedError {
@@ -76,14 +74,7 @@ impl VM {
         Ok(())
     }
 
-    pub fn eval(&mut self) -> Result<Value, VmError> {
-        let code_offset = self.metadata.code_offset;
-        let mut cursor = code_offset as usize;
-        let value = self.handle_instruction(&mut cursor)?;
-        Ok(value)
-    }
-
-    pub fn eval_as<T>(&mut self, str_addr: &str) -> Result<T, VmError>
+    pub fn eval<T>(&mut self, str_addr: &str) -> Result<T, VmError>
     where
         T: FromValue,
     {
@@ -92,7 +83,7 @@ impl VM {
         let mut value: Value = Value::None;
 
         for key in str_addr.split('.') {
-            value = self.handle_instruction(&mut cursor)?;
+            value = self.handle_instruction(cursor)?;
             if let Value::Table(table) = &value {
                 match table.get(vec![key]) {
                     Some(Value::Thunk(thunk_idx)) => {
@@ -110,36 +101,12 @@ impl VM {
                 }
             };
         }
+
+        if let Value::Thunk(thunk_idx) = value {
+            value = self.eval_thunk(thunk_idx)?
+        };
 
         T::from_value(value)
-    }
-
-    pub fn eval_table(&mut self, str_addr: &str) -> Result<Value, VmError> {
-        let code_offset = self.metadata.code_offset;
-        let mut cursor = code_offset as usize;
-        let mut value: Value = Value::None;
-
-        for key in str_addr.split('.') {
-            value = self.handle_instruction(&mut cursor)?;
-            if let Value::Table(table) = &value {
-                match table.get(vec![key]) {
-                    Some(Value::Thunk(thunk_idx)) => {
-                        if let Some(thunk_offset) = self.thunk_table.get(&(thunk_idx as usize)) {
-                            cursor = (*thunk_offset + code_offset) as usize;
-                        }
-                        value = Value::Thunk(thunk_idx);
-                    }
-                    Some(n) => value = n,
-                    None => {
-                        return Err(VmError::UnexpectedError {
-                            message: format!("property not found: {}", key),
-                        });
-                    }
-                }
-            };
-        }
-
-        Ok(value)
     }
 
     fn load_metadata(&mut self) -> Result<(), VmError> {
@@ -152,7 +119,7 @@ impl VM {
         if magic_code != MAGIC_NUMBER {
             return Err(VmError::UnexpectedError {
                 message: "Magic code not
-                                                suitable"
+                                        suitable"
                     .into(),
             });
         };
@@ -278,11 +245,12 @@ impl VM {
         self.const_pool.get(&idx)
     }
 
-    pub fn handle_instruction(&mut self, cursor: &mut usize) -> Result<Value, VmError> {
+    pub fn handle_instruction(&mut self, mut cursor: usize) -> Result<Value, VmError> {
         loop {
-            let ins = read_u32(&self.bytes, cursor).ok_or_else(|| VmError::UnexpectedError {
-                message: "Error in get ins value".into(),
-            })?;
+            let ins =
+                read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
+                    message: "Error in get ins value".into(),
+                })?;
 
             let opcode = extract_opcode(ins).ok_or_else(|| VmError::UnexpectedError {
                 message: "Error in get opcode".into(),
@@ -333,7 +301,7 @@ impl VM {
                 OpCode::ADL => {
                     let params = OpCode::ADL.decode(ins);
                     let list_reg = params[0];
-                    let value = self.registers.get(params[2] as usize).ok_or_else(|| {
+                    let value = self.registers.get(params[1] as usize).ok_or_else(|| {
                         VmError::UnexpectedError {
                             message: "Error in get value in ADL".into(),
                         }
@@ -361,5 +329,28 @@ impl VM {
                 }
             }
         }
+    }
+
+    pub fn force<T>(&mut self, mut v: Value) -> Result<T, VmError>
+    where
+        T: FromValue,
+    {
+        if let Value::Thunk(thunk_idx) = v {
+            v = self.eval_thunk(thunk_idx)?
+        };
+
+        T::from_value(v)
+    }
+
+    fn eval_thunk(&mut self, thunk_idx: u32) -> Result<Value, VmError> {
+        let code_offset = self.metadata.code_offset;
+        let mut value: Value = Value::None;
+
+        if let Some(thunk_offset) = self.thunk_table.get(&(thunk_idx as usize)) {
+            let cursor = (*thunk_offset + code_offset) as usize;
+            value = self.handle_instruction(cursor)?;
+        };
+
+        Ok(value)
     }
 }
