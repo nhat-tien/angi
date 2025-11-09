@@ -1,7 +1,7 @@
 <h1 align="center">Angi</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/github/last-commit/nhat-tien/angi?style=for-the-badge"/>
+  <img src="https://img.shields.io/github/last-commit/nhat-tien/angi"/>
   <img src="https://github.com/nhat-tien/angi/actions/workflows/test.yml/badge.svg" />
 </p>
 

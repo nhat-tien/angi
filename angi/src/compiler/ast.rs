@@ -23,6 +23,13 @@ pub enum Expr {
     LetIn {
         let_part: HashMap<Indentifier, Expr>,
         in_part: HashMap<Indentifier, Expr>,
+    },
+    FunctionDeclare {
+        params: Vec<String>,
+        body: Box<Expr>
+    },
+    FunctionCall {
+        args: Vec<Expr>
     }
 }
 

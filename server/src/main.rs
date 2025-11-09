@@ -47,9 +47,11 @@ async fn handler(State(vm): State<Avm>) -> Result<Html<String>, (StatusCode, Str
 }
 fn build_router(vm: Avm) -> Result<Router, VmError> {
     let mut ready_vm = vm.lock().unwrap();
-    let list_routes = ready_vm.eval::<List<Table>>("routes")?;
+    let mut list_routes = ready_vm.eval::<List<Table>>("routes")?;
+    list_routes.force(&mut ready_vm);
+    let list_routes_iter = list_routes.iter().unwrap();
 
-    Ok(list_routes.iter(&mut ready_vm).fold(Router::new(), |router, route| {
+    Ok(list_routes_iter.fold(Router::new(), |router, route| {
         let path = route.get::<String>("path").unwrap();
         let message = route.get::<String>("handler").unwrap();
 

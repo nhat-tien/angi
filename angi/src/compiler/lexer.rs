@@ -230,7 +230,12 @@ impl<'a> Lexer<'a>
                 self.emit_one_character(Token::RightParen);
             }
             '=' => {
-                self.emit_one_character(Token::Equal);
+                if matches!(self.chr1, Some('>')) {
+                    self.emit_one_character(Token::EqualRightArrow);
+                    self.move_next_char();
+                } else {
+                    self.emit_one_character(Token::Equal);
+                }
             }
             ';' => {
                 self.emit_one_character(Token::Semicolon);
@@ -263,7 +268,12 @@ impl<'a> Lexer<'a>
                 }
             }
             '|' => {
-                self.emit_one_character(Token::Bar);
+                if matches!(self.chr1, Some('>')) {
+                    self.emit_one_character(Token::Pipe);
+                    self.move_next_char();
+                } else {
+                    self.emit_one_character(Token::Bar);
+                }
             }
             '\n' => {
                 self.emit_one_character(Token::NewLine);

@@ -52,8 +52,9 @@ pub fn index(args: &[String]) {
             };
 
             let list_routes = vm.eval::<List<Table>>("routes").expect("ckdsn");
+            let list_routes_iter = list_routes.iter().unwrap();
 
-            for route in list_routes.iter(&mut vm) {
+            for route in list_routes_iter {
                 let path = route.get::<String>("path").unwrap();
                 let message = route.get::<String>("handler").unwrap();
                 println!("path {path}");

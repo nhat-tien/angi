@@ -3,11 +3,11 @@
     routes = [
        {
            path = "/";
-           handler = "Hello world";
+           handler = () => html("<h1>Hello</h1>");
        },
        {
            path = "/Hello";
-           handler = "Hell tien";
+           handler = () => html("<h1>Hello World</h1>");
        }
     ];
 }

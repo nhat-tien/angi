@@ -1,35 +1,29 @@
-
-#[allow(dead_code)]
 #[derive(Debug, PartialEq)]
 pub enum Token {
-
-    LeftBrace,    // {
-    RightBrace,   // }
-    LeftBracket,  // [
-    RightBracket, // ]
-    LeftParen,    // (
-    RightParen,   // )
-    Equal,        // =
-    Semicolon,    // ;
-    Comma,        // ,
-    RightArrow,   // ->
-    Bar,          // |
-    
+    LeftBrace,       // {
+    RightBrace,      // }
+    LeftBracket,     // [
+    RightBracket,    // ]
+    LeftParen,       // (
+    RightParen,      // )
+    Equal,           // =
+    Semicolon,       // ;
+    Comma,           // ,
+    RightArrow,      // ->
+    EqualRightArrow, // => 
+    Bar,             // |
     // Operator
-    Plus, // +
-    Dash, // -
-    Star, // *
-    Slash, // / 
-    Percent, // %
-    
+    Plus,            // +
+    Dash,            // -
+    Star,            // *
+    Slash,           // / 
+    Percent,         // %
+    Pipe,            // |>
     
     Name(String),
     String(String),
     Number(i32),
 
-    // Reserved 
-    Return,
-    Import,
     True,
     False,
     
@@ -41,8 +35,6 @@ pub enum Token {
 impl Token {
     pub fn str_to_keyword(name: &str) -> Option<Token> {
         match name {
-            "return" => Some(Token::Return),
-            "import" => Some(Token::Import),
             "true"   => Some(Token::True),
             "false"  => Some(Token::False),
             _ => None

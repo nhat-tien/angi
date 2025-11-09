@@ -26,20 +26,25 @@ impl<T> List<T> where T : FromValue {
         self.len() == 0
     }
 
-    // pub fn get(&self, idx: usize) -> Option<&Value>{
-    //     self.child.get(idx)
-    // }
-
-    pub fn iter(&self, vm: &mut VM) -> impl Iterator<Item = T> {
+    pub fn get(&self, idx: usize) -> Option<&T>{
         if let Some(list) = &self.raw_child {
-            list.clone().into_iter()
+            Some(list.get(idx)?)
         } else {
+            None
+        }
+    }
+
+    pub fn iter(&self) -> Option<impl Iterator<Item = T>> {
+        self.raw_child.as_ref().map(|list| list.clone().into_iter())
+    }
+
+    pub fn force(&mut self, vm: &mut VM) {
+       self.raw_child = Some(
             self.value_child
                 .iter()
                 .map(|v| vm.force::<T>(v.clone()).unwrap())
                 .collect::<Vec<_>>()
-                .into_iter()
-        }
+        );
     }
 }
 

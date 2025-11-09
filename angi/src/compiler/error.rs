@@ -16,6 +16,7 @@ pub struct LexicalError {
 }
 
 
+#[derive(Debug)]
 pub enum CompilationError {
     IOError {
         message: String
