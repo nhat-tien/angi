@@ -1,13 +1,29 @@
-let
-   json = import("lib");
-in 
+let 
+  html      = import("lib.html");
+  db        = import("lib.db");
+  validator = import("lib.validator");
+in
 {
-   port = 3030;
-   route = [
-      {
-         path = "/<id>";
-         handler = (id: int) => "<h1>{id}</h1>"
+    port = 3030;
+    routes = [
+       {
+           path = "/";
+           handler = () => "Hello world";
+       },
+       {
+           path = "/id:int";
+           handler = (id: int) => html("<p>Hello {id}</p>");
+       },
+       {
+           path = "/id:int";
+           handler = ({ data }) => 
+              data
+              |> validator(data)
+              |> then(data => 
+                    db.table("denkjn").insert(data)
+                 ) 
+              |> map(data => successMessage())
+              |> orElse(e => error()) 
       }
-   ]
+    ];
 };
-

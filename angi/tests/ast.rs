@@ -266,3 +266,77 @@ fn ast_test_list_of_table() {
         ])
     }));
 }
+
+#[test]
+fn ast_test_function_declare_no_param() {
+    let mut lex = Lexer::new_from_str(r#"
+{
+    port = () => "Hello";
+};
+    "#);
+    let expr = parse(&mut lex);
+
+    assert_eq!(expr, Ok(Expr::Table {
+        fields: HashMap::from([
+            (
+                String::from("port"),
+                Expr::FunctionDeclare {
+                    params: vec![],
+                    body: Box::new(Expr::LiteralString("Hello".into()))
+                },
+            ),
+        ])
+    }));
+}
+
+#[test]
+fn ast_test_function_declare_with_one_param() {
+    let mut lex = Lexer::new_from_str(r#"
+{
+    port = (name) => "Hello" + name;
+};
+    "#);
+    let expr = parse(&mut lex);
+
+    assert_eq!(expr, Ok(Expr::Table {
+        fields: HashMap::from([
+            (
+                String::from("port"),
+                Expr::FunctionDeclare {
+                    params: vec![String::from("name")],
+                    body: Box::new(Expr::Binary {
+                        op: Operator::Add,
+                        lhs: Box::new(Expr::LiteralString("Hello".into())),
+                        rhs: Box::new(Expr::Var("name".into())),
+                    })
+                },
+            ),
+        ])
+    }));
+}
+
+#[test]
+fn ast_test_function_declare_more_param() {
+    let mut lex = Lexer::new_from_str(r#"
+{
+    port = (name, age, address) => "Hello";
+};
+    "#);
+    let expr = parse(&mut lex);
+
+    assert_eq!(expr, Ok(Expr::Table {
+        fields: HashMap::from([
+            (
+                String::from("port"),
+                Expr::FunctionDeclare {
+                    params: vec![
+                        String::from("name"),
+                        String::from("age"),
+                        String::from("address")
+                    ],
+                    body: Box::new(Expr::LiteralString("Hello".into()))
+                },
+            ),
+        ])
+    }));
+}

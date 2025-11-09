@@ -30,7 +30,8 @@ pub enum Expr {
     },
     FunctionCall {
         args: Vec<Expr>
-    }
+    },
+    Var(String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
