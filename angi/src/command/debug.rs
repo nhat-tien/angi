@@ -5,7 +5,7 @@ use instructions::extract_opcode;
 use vm::value::{List, Table};
 use vm::vm::VM;
 
-use crate::compiler::{code_gen::BytecodeGen, lexer::Lexer, parser::parse};
+use crate::compiler::{bytecode::BytecodeGen, lexer::Lexer, parser::parse};
 use crate::compiler::optimization::optimization;
 const PADDING: usize = 16;
 
@@ -106,7 +106,6 @@ pub fn print_bytecode(r: &mut BufReader<File>) {
     let (magic_code,_) = read_u32(r);
     println!("{:<PADDING$}{} : ANGI", "MAGIC CODE", magic_code);
 
-
     let ( version, _) = read_u32(r);
     println!("{:<PADDING$}{}", "VERSION", version);
 
@@ -122,6 +121,12 @@ pub fn print_bytecode(r: &mut BufReader<File>) {
     let ( thunk_size, thunk_size_num) = read_u32(r);
     println!("{:<PADDING$}{}", "THUNK SIZE", thunk_size);
 
+    let ( function_offset, _) = read_u32(r);
+    println!("{:<PADDING$}{}", "FUNC OFFSET", function_offset);
+
+    let ( function_size, function_size_num) = read_u32(r);
+    println!("{:<PADDING$}{}", "FUNC SIZE", function_size);
+
     let ( code_offset, _) = read_u32(r);
     println!("{:<PADDING$}{}", "CODE OFFSET", code_offset);
 
@@ -130,8 +135,8 @@ pub fn print_bytecode(r: &mut BufReader<File>) {
 
     read_const(r, const_size_num);
     read_thunk(r, thunk_size_num);
+    read_function(r, function_size_num);
     read_instruction(r, code_size_num);
-
 
     let ( total_byte, total_byte_num) = read_u32(r);
     println!("{:<PADDING$}{}: {}", "TOTAL BYTE", total_byte, total_byte_num);
@@ -175,6 +180,16 @@ fn read_thunk(r: &mut BufReader<File>, mut thunk_size: u32) {
         let ( thunk, _) = read_u32(r);
         println!("{:<PADDING$}{}", "THUNK", thunk);
         thunk_size -= 1;
+    }
+}
+
+fn read_function(r: &mut BufReader<File>, mut function_size: u32) {
+    while function_size > 0 {
+        let ( nargs, nargs_num) = read_u32(r);
+        println!("{:<PADDING$}{}: {}", "FUNC NARG", nargs, nargs_num);
+        let ( body_addr, _) = read_u32(r);
+        println!("{:<PADDING$}{}", "FUNC BODY", body_addr);
+        function_size-= 1;
     }
 }
 

@@ -146,7 +146,7 @@ pub fn expr_with_bp(lexer: &mut Peekable<&mut Lexer>, min_pb: u8) -> Result<Expr
             match lexer.peek() {
                 Some(Ok((_, Token::LeftParen, (_, _)))) => {
                     lexer.next();
-                    expr_calle(lexer)?
+                    expr_calle(lexer, name)?
                 },
                 _ => {
                     Expr::Var(name)
@@ -155,6 +155,7 @@ pub fn expr_with_bp(lexer: &mut Peekable<&mut Lexer>, min_pb: u8) -> Result<Expr
         },
         Some(Ok((_, Token::LeftBrace, (_, _)))) => expr_table(lexer)?,
         Some(Ok((_, Token::LeftBracket, (_, _)))) => expr_list(lexer)?,
+        Some(Ok((_, Token::Let, (_, _)))) => expr_let_in(lexer)?,
         t => {
             return Err(ParseError {
                 error: format!("bad token, expect left {:?}", t),
@@ -241,10 +242,11 @@ fn expr_function(
 
 }
 
-fn expr_calle(lexer: &mut Peekable<&mut Lexer>) -> Result<Expr, ParseError> {
+fn expr_calle(lexer: &mut Peekable<&mut Lexer>, calle_name: String) -> Result<Expr, ParseError> {
 
     if let Some(Ok((_, Token::RightParen, (_, _)))) = lexer.peek() {
         return Ok(Expr::FunctionCall{
+            name: calle_name,
             args: vec![],
         })
     };
@@ -271,7 +273,60 @@ fn expr_calle(lexer: &mut Peekable<&mut Lexer>) -> Result<Expr, ParseError> {
     };
 
     Ok(Expr::FunctionCall{
+        name: calle_name,
         args,
+    })
+}
+
+fn expr_let_in(lexer: &mut Peekable<&mut Lexer>) -> Result<Expr, ParseError> {
+    let mut attr_set: HashMap<String, Expr> = HashMap::new();
+    skip_new_line(lexer);
+    loop {
+        if let Some(Ok((_, Token::In, (_, _)))) = lexer.peek() {
+            lexer.next();
+            break;
+        }
+        if let Some(Ok((_, Token::NewLine, (_, _)))) = lexer.peek() {
+            lexer.next();
+            continue;
+        }
+
+        let name = match lexer.next() {
+            Some(Ok((_, Token::Name(name), (_, _)))) => name,
+            Some(Ok((line_of_code, token, (start_pos, _)))) => {
+                return Err(ParseError {
+                    error: format!("Expect Token::Name, but find {:?}", token),
+                    location: (line_of_code, start_pos),
+                });
+            }
+            _ => panic!("Unexpect Parser Err"),
+        };
+
+        if !matches!(lexer.next(), Some(Ok((_, Token::Equal, (_, _))))) {
+            return Err(ParseError {
+                error: String::from("Expect equal"),
+                location: (0, 0),
+            });
+        }
+
+        let rhs = expr_with_bp(lexer, 0)?;
+
+        if !matches!(lexer.next(), Some(Ok((_, Token::Semicolon, (_, _))))) {
+            return Err(ParseError {
+                error: String::from("Expect semicolon"),
+                location: (0, 0),
+            });
+        }
+
+        attr_set.insert(name, rhs);
+    }
+
+    skip_new_line(lexer);
+    let in_part = expr_with_bp(lexer, 0)?;
+
+    Ok(Expr::LetIn {
+        let_part: attr_set,
+        in_part: Box::new(in_part)
     })
 }
 

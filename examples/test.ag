@@ -1,4 +1,3 @@
 {
-    port = (name) => "Hello" + name;
-    calle = port("Tien", 1+2);
+    port = () => htmlTemplate("./index.html");
 };

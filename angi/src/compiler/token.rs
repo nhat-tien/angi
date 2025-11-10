@@ -24,6 +24,8 @@ pub enum Token {
     String(String),
     Number(i32),
 
+    Let,
+    In,
     True,
     False,
     
@@ -35,8 +37,10 @@ pub enum Token {
 impl Token {
     pub fn str_to_keyword(name: &str) -> Option<Token> {
         match name {
-            "true"   => Some(Token::True),
-            "false"  => Some(Token::False),
+            "let"   => Some(Token::Let),
+            "in"    => Some(Token::In),
+            "true"  => Some(Token::True),
+            "false" => Some(Token::False),
             _ => None
         }
     }

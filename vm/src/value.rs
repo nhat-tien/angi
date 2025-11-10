@@ -1,8 +1,10 @@
 mod list;
 mod table;
+mod function;
 
 pub use list::List;
 pub use table::Table;
+pub use function::Arg;
 
 use crate::error::VmError;
 use std::fmt;
@@ -16,6 +18,7 @@ pub enum Value {
     Table(Box<Tree<Value>>),
     List(Vec<Value>),
     Thunk(u32),
+    Function(u32),
     None,
 }
 
@@ -26,6 +29,7 @@ impl Clone for Value {
             Self::String(arg0) => Self::String(arg0.clone()),
             Self::Table(arg0) => Self::Table(arg0.clone()),
             Self::Thunk(arg0) => Self::Thunk(*arg0),
+            Self::Function(arg0) => Self::Thunk(*arg0),
             Self::List(arg0) => Self::List(arg0.clone()),
             Self::None => Self::None,
         }
@@ -40,6 +44,7 @@ impl fmt::Display for Value {
             Value::Table(_) => write!(f, "Table"),
             Value::List(_) => write!(f, "List"),
             Value::Thunk(_) => write!(f, "Thunk"),
+            Value::Function(_) => write!(f, "Function"),
             Value::None => write!(f, "None"),
         }
     }

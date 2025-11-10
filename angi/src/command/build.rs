@@ -6,7 +6,7 @@ static SERVER: &[u8] = include_bytes!(env!("RUNTIME_PATH"));
 
 use crate::compiler::error::CompilationError;
 use crate::compiler::{
-    code_gen::BytecodeGen,
+    bytecode::BytecodeGen,
     lexer::Lexer,
     optimization::optimization,
     parser::parse,

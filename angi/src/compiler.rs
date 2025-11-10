@@ -1,15 +1,15 @@
-use code_gen::BytecodeGen;
+use bytecode::BytecodeGen;
 use error::CompilationError;
 use lexer::Lexer;
 use parser::parse;
 
 pub mod ast;
-pub mod code_gen;
 pub mod error;
 pub mod lexer;
 pub mod optimization;
 pub mod parser;
 pub mod token;
+pub mod bytecode;
 
 pub fn compile(src: String) -> Result<Vec<u8>, CompilationError> {
 

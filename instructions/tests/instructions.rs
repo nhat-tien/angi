@@ -3,28 +3,28 @@ use instructions::{extract_opcode, OpCode, Operand, OPCODE_OFFSET};
 
 #[test]
 fn test_opcode_from_and_to_u8() {
-    assert_eq!(OpCode::from_u8(1), Some(OpCode::LDC));
-    assert_eq!(OpCode::from_u8(8), Some(OpCode::ADL));
+    assert_eq!(OpCode::from_u8(1), Some(OpCode::LOADCONST));
+    assert_eq!(OpCode::from_u8(8), Some(OpCode::ADDLIST));
     assert_eq!(OpCode::from_u8(99), None);
 
-    assert_eq!(OpCode::LDC.to_u8(), 1);
-    assert_eq!(OpCode::ADL.to_u8(), 8);
+    assert_eq!(OpCode::LOADCONST.to_u8(), 1);
+    assert_eq!(OpCode::ADDLIST.to_u8(), 8);
 }
 
 #[test]
 fn test_opcode_to_u32() {
-    assert_eq!(OpCode::RET.to_u32(), 6);
+    assert_eq!(OpCode::RETURN.to_u32(), 6);
 }
 
 #[test]
 fn test_extract_opcode() {
     let encoded = (1u32 << OPCODE_OFFSET) | 0x00FFFFFF;
-    assert_eq!(extract_opcode(encoded), Some(OpCode::LDC));
+    assert_eq!(extract_opcode(encoded), Some(OpCode::LOADCONST));
 }
 
 #[test]
 fn test_ldc_encode_decode() {
-    let op = OpCode::LDC;
+    let op = OpCode::LOADCONST;
     // layout = [RegAddr, ConstIdx]
     // operand order matches the layout order (RegAddr, ConstIdx)
     let operands = vec![3, 1234];
@@ -38,7 +38,7 @@ fn test_ldc_encode_decode() {
 
 #[test]
 fn test_sat_encode_decode() {
-    let op = OpCode::SAT;
+    let op = OpCode::SETATTR;
     let operands = vec![1, 2, 3];
     let bytes = op.encode(operands.clone());
     let encoded = u32::from_be_bytes(bytes);
@@ -48,7 +48,7 @@ fn test_sat_encode_decode() {
 
 #[test]
 fn test_mtk_encode_decode() {
-    let op = OpCode::MTK;
+    let op = OpCode::MAKETHUNK;
     let operands = vec![2, 55];
     let bytes = op.encode(operands.clone());
     let encoded = u32::from_be_bytes(bytes);

@@ -8,7 +8,7 @@ use crate::utils::{
 };
 use crate::value::{FromValue, Value};
 use instructions::{MAGIC_NUMBER, OpCode, extract_opcode};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::fs::File;
 
 pub struct VM {
@@ -17,6 +17,7 @@ pub struct VM {
     const_pool: HashMap<usize, ConstantValue>,
     thunk_table: HashMap<usize, u32>,
     bytes: Vec<u8>,
+    args_queue: VecDeque<Value>
 }
 
 impl Default for VM {
@@ -27,6 +28,7 @@ impl Default for VM {
             thunk_table: HashMap::new(),
             bytes: vec![],
             metadata: MetaData::default(),
+            args_queue: VecDeque::new()
         }
     }
 }
@@ -257,16 +259,16 @@ impl VM {
             })?;
 
             match opcode {
-                OpCode::MTB => {
-                    let params = OpCode::MTB.decode(ins);
+                OpCode::MAKETABLE => {
+                    let params = OpCode::MAKETABLE.decode(ins);
                     self.registers.set_new_table(params[0] as usize);
                 }
-                OpCode::MLI => {
-                    let params = OpCode::MLI.decode(ins);
+                OpCode::MAKELIST => {
+                    let params = OpCode::MAKELIST.decode(ins);
                     self.registers.set(params[0] as usize, Value::List(vec![]));
                 }
-                OpCode::LDC => {
-                    let params = OpCode::LDC.decode(ins);
+                OpCode::LOADCONST => {
+                    let params = OpCode::LOADCONST.decode(ins);
                     let constant = self.const_pool.get(&(params[1] as usize)).ok_or_else(|| {
                         VmError::UnexpectedError {
                             message: "Error in get constant value".into(),
@@ -282,8 +284,8 @@ impl VM {
                         }
                     }
                 }
-                OpCode::SAT => {
-                    let params = OpCode::SAT.decode(ins);
+                OpCode::SETATTR => {
+                    let params = OpCode::SETATTR.decode(ins);
                     let table_reg = params[0];
                     let key = self.registers.get(params[1] as usize).ok_or_else(|| {
                         VmError::UnexpectedError {
@@ -298,8 +300,8 @@ impl VM {
                     self.registers
                         .set_attr_table(table_reg as usize, key.to_string()?, value);
                 }
-                OpCode::ADL => {
-                    let params = OpCode::ADL.decode(ins);
+                OpCode::ADDLIST => {
+                    let params = OpCode::ADDLIST.decode(ins);
                     let list_reg = params[0];
                     let value = self.registers.get(params[1] as usize).ok_or_else(|| {
                         VmError::UnexpectedError {
@@ -308,14 +310,39 @@ impl VM {
                     })?;
                     self.registers.add_to_list(list_reg as usize, value);
                 }
-                OpCode::MTK => {
-                    let params = OpCode::MTK.decode(ins);
+                OpCode::MAKEFUNC => {
+                    let params = OpCode::MAKEFUNC.decode(ins);
+                    let reg = params[0];
+                    self.registers.set(reg as usize, Value::Function(reg));
+                }
+                OpCode::LOADARG => {
+                    let params = OpCode::LOADARG.decode(ins);
+                    let reg = params[0];
+                    let arg = self.args_queue.pop_front().ok_or_else(|| {
+                        VmError::UnexpectedError {
+                            message: "Error in pop args_queue".into(),
+                        }
+                    })?;
+                    self.registers.set(reg as usize, arg);
+                }
+                OpCode::PUSHARG => {
+                    let params = OpCode::PUSHARG.decode(ins);
+                    let reg = params[0];
+                    let value = self.registers.get(reg as usize).ok_or_else(|| {
+                        VmError::UnexpectedError {
+                            message: "Error in get value in PUS".into(),
+                        }
+                    })?;
+                    self.args_queue.push_back(value);
+                }
+                OpCode::MAKETHUNK => {
+                    let params = OpCode::MAKETHUNK.decode(ins);
                     let reg = params[0];
                     let thunk_idx = params[1];
                     self.registers.set(reg as usize, Value::Thunk(thunk_idx));
                 }
-                OpCode::RET => {
-                    let params = OpCode::RET.decode(ins);
+                OpCode::RETURN => {
+                    let params = OpCode::RETURN.decode(ins);
                     return self.registers.get(params[0] as usize).ok_or_else(|| {
                         VmError::UnexpectedError {
                             message: "Error in get registers value".into(),

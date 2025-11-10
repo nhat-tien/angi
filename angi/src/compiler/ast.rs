@@ -22,13 +22,14 @@ pub enum Expr {
     },
     LetIn {
         let_part: HashMap<Indentifier, Expr>,
-        in_part: HashMap<Indentifier, Expr>,
+        in_part: Box<Expr>,
     },
     FunctionDeclare {
         params: Vec<String>,
         body: Box<Expr>
     },
     FunctionCall {
+        name: String,
         args: Vec<Expr>
     },
     Var(String),
