@@ -1,13 +1,11 @@
 {
-  htmlTemplate = (path) => 
-    { 
+  html = (path) => { 
        type = "htmlTemplate"; 
        path = path;
     };
 
-  json = () => (body) => 
-    { 
+  json = (body) => { 
        type = "json"; 
        body = body;
     };
-}
+};

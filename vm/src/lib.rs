@@ -6,3 +6,4 @@ pub mod utils;
 pub mod value;
 pub mod vm;
 mod constant;
+mod function;

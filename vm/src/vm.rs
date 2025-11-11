@@ -1,5 +1,6 @@
 use crate::constant::ConstantValue;
 use crate::error::VmError;
+use crate::function::Function;
 use crate::metadata::MetaData;
 use crate::register::Register;
 use crate::utils::{
@@ -16,6 +17,7 @@ pub struct VM {
     registers: Register,
     const_pool: HashMap<usize, ConstantValue>,
     thunk_table: HashMap<usize, u32>,
+    function_table: HashMap<usize, Function>,
     bytes: Vec<u8>,
     args_queue: VecDeque<Value>
 }
@@ -26,6 +28,7 @@ impl Default for VM {
             registers: Register::new(),
             const_pool: HashMap::new(),
             thunk_table: HashMap::new(),
+            function_table: HashMap::new(),
             bytes: vec![],
             metadata: MetaData::default(),
             args_queue: VecDeque::new()

@@ -5,6 +5,7 @@ use instructions::extract_opcode;
 use vm::value::{List, Table};
 use vm::vm::VM;
 
+use crate::compiler::bytecode::load_global;
 use crate::compiler::{bytecode::BytecodeGen, lexer::Lexer, parser::parse};
 use crate::compiler::optimization::optimization;
 const PADDING: usize = 16;
@@ -77,7 +78,10 @@ pub fn index(args: &[String]) {
                 Err(err) => panic!("Err in parse {err:?}"),
             };
 
-            let mut bytecode_genaration = BytecodeGen::new();
+            let global_func = load_global();
+
+            let mut bytecode_genaration = BytecodeGen::new()
+                  .with_global_func(global_func);
 
             optimization(&mut ast);
 
@@ -127,6 +131,12 @@ pub fn print_bytecode(r: &mut BufReader<File>) {
     let ( function_size, function_size_num) = read_u32(r);
     println!("{:<PADDING$}{}", "FUNC SIZE", function_size);
 
+    let ( global_func_offset, _) = read_u32(r);
+    println!("{:<PADDING$}{}", "G-FUNC OFFSET", global_func_offset);
+
+    let ( global_func_size, global_func_size_num) = read_u32(r);
+    println!("{:<PADDING$}{}: {}", "G-FUNC SIZE", global_func_size, global_func_size_num);
+
     let ( code_offset, _) = read_u32(r);
     println!("{:<PADDING$}{}", "CODE OFFSET", code_offset);
 
@@ -136,6 +146,7 @@ pub fn print_bytecode(r: &mut BufReader<File>) {
     read_const(r, const_size_num);
     read_thunk(r, thunk_size_num);
     read_function(r, function_size_num);
+    read_global_function(r, global_func_size_num);
     read_instruction(r, code_size_num);
 
     let ( total_byte, total_byte_num) = read_u32(r);
@@ -177,8 +188,8 @@ fn read_const(r: &mut BufReader<File>, mut const_size: u32) {
 
 fn read_thunk(r: &mut BufReader<File>, mut thunk_size: u32) {
     while thunk_size > 0 {
-        let ( thunk, _) = read_u32(r);
-        println!("{:<PADDING$}{}", "THUNK", thunk);
+        let ( thunk, thunk_num) = read_u32(r);
+        println!("{:<PADDING$}{}: {}", "THUNK", thunk, thunk_num);
         thunk_size -= 1;
     }
 }
@@ -187,9 +198,19 @@ fn read_function(r: &mut BufReader<File>, mut function_size: u32) {
     while function_size > 0 {
         let ( nargs, nargs_num) = read_u32(r);
         println!("{:<PADDING$}{}: {}", "FUNC NARG", nargs, nargs_num);
-        let ( body_addr, _) = read_u32(r);
-        println!("{:<PADDING$}{}", "FUNC BODY", body_addr);
+        let ( body_addr, body_addr_num) = read_u32(r);
+        println!("{:<PADDING$}{}: {}", "FUNC BODY", body_addr, body_addr_num);
         function_size-= 1;
+    }
+}
+
+fn read_global_function(r: &mut BufReader<File>, mut global_function_size: u32) {
+    while global_function_size > 0 {
+        let ( g_func, _) = read_u32(r);
+        println!("{:<PADDING$}{}", "G-FUNC NAME", g_func);
+        let ( g_func_idx, _) = read_u32(r);
+        println!("{:<PADDING$}{}", "G-FUNC IDX", g_func_idx);
+        global_function_size -= 1;
     }
 }
 
