@@ -85,12 +85,14 @@ pub fn index(args: &[String]) {
 
             optimization(&mut ast);
 
-            let content = bytecode_genaration.get_binary(ast);
+            let content = bytecode_genaration.get_binary(ast).unwrap_or_else(|err| {
+                panic!("{err:?}");
+            });
 
-            let mut file = match File::create(dist_file_path) {
-                Ok(file) => file,
-                Err(err) => panic!("Cannot create file {err:?}"),
-            };
+            let mut file = File::create(dist_file_path).unwrap_or_else(|err| {
+                panic!("Cannot create file {err:?}");
+             });
+
             let _ = file.write_all(&content);
         }
         "readbc" => {

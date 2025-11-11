@@ -4,7 +4,7 @@ mod thunk;
 mod load_global;
 
 pub use load_global::load_global;
-use super::ast::{Expr, Operator};
+use super::{ast::{Expr, Operator}, error::BytecodeGenerationError};
 use constant::Constant;
 use core::panic;
 use function::Function;
@@ -46,10 +46,16 @@ impl BytecodeGen {
         self
     }
 
-    pub fn get_binary(&mut self, expr: Expr) -> Vec<u8> {
-        self.visit_expr(expr);
-        self.visit_remain_thunk();
-        self.visit_function();
+    pub fn get_binary(&mut self, expr: Expr) -> 
+    Result<Vec<u8>, BytecodeGenerationError> 
+    {
+        let reg = self.visit_expr(&expr, false)?;
+
+        self.free_register(reg as usize);
+        self.emit_ins(OpCode::RETURN.encode(vec![reg as u32]));
+
+        let _ = self.visit_remain_thunk();
+        let _ = self.visit_function();
 
         let mut bytes = vec![];
         self.add_header_to_binary(&mut bytes);
@@ -60,10 +66,10 @@ impl BytecodeGen {
         self.add_ins_code_to_binary(&mut bytes);
         self.add_footer_to_binary(&mut bytes);
 
-        bytes
+        Ok(bytes)
     }
 
-    pub fn emit_expr(&mut self, expr: &Expr) -> u8 {
+    pub fn visit_expr(&mut self, expr: &Expr, is_make_thunk: bool) -> Result<u8, BytecodeGenerationError>{
         match expr {
             Expr::Number(num) => {
                 let idx_const = self.make_const(Constant::Number(*num));
@@ -74,7 +80,7 @@ impl BytecodeGen {
                     reg_value as u32,
                     idx_const.try_into().expect("Error when convert idx_const to u32"),
                 ]));
-                reg_value
+                Ok(reg_value)
             }
             Expr::LiteralString(str) => {
                 let idx_const = self.make_const(Constant::String(str.to_string()));
@@ -85,12 +91,12 @@ impl BytecodeGen {
                     reg_value as u32,
                     idx_const.try_into().expect("Error when convert idx_const to u32"),
                 ]));
-                reg_value
+                Ok(reg_value)
             }
             Expr::Binary { op, lhs, rhs } => {
-                let lhs_reg = self.emit_expr(lhs);
+                let lhs_reg = self.visit_expr(lhs, false)?;
 
-                let rhs_reg = self.emit_expr(rhs);
+                let rhs_reg = self.visit_expr(rhs, false)?;
 
                 let reg_value = self
                     .get_register()
@@ -108,36 +114,61 @@ impl BytecodeGen {
                     lhs_reg as u32,
                     rhs_reg as u32,
                 ]));
-                reg_value
+                self.free_register(reg_value as usize);
+                self.free_register(lhs_reg as usize);
+                self.free_register(rhs_reg as usize);
+                Ok(reg_value)
             }
             Expr::Var(name) => {
                 let reg_value = self.context_var.get(name);
                 match reg_value {
-                    Some(reg) => *reg,
-                    None => panic!("Not found variable {name}"),
+                    Some(reg) => Ok(*reg),
+                    None => Err(BytecodeGenerationError::NotFoundVariable {  }),
                 }
             }
-            Expr::Table { .. } | Expr::List { .. } => {
-                let idx_thunk = self.make_thunk(expr.clone());
-                let reg_value = self
-                    .get_register()
-                    .expect("Error in get register: the value");
-                self.emit_ins(OpCode::MAKETHUNK.encode(vec![
-                    reg_value as u32,
-                    idx_thunk.try_into().expect("Error when convert idx_thunk to u32"),
-                ]));
-                reg_value
+            Expr::Table { .. } => {
+                if is_make_thunk {
+                    let idx_thunk = self.make_thunk(expr.clone());
+                    let reg_value = self
+                        .get_register()
+                        .expect("Error in get register: the value");
+                    self.emit_ins(OpCode::MAKETHUNK.encode(vec![
+                        reg_value as u32,
+                        idx_thunk.try_into().expect("Error when convert idx_thunk to u32"),
+                    ]));
+                    Ok(reg_value)
+                } else {
+                    Ok(self.visit_table(expr.clone())?)
+                }
+            }
+            Expr::List { .. } => {
+                if is_make_thunk {
+                    let idx_thunk = self.make_thunk(expr.clone());
+                    let reg_value = self
+                        .get_register()
+                        .expect("Error in get register: the value");
+                    self.emit_ins(OpCode::MAKETHUNK.encode(vec![
+                        reg_value as u32,
+                        idx_thunk.try_into().expect("Error when convert idx_thunk to u32"),
+                    ]));
+                    Ok(reg_value)
+                } else {
+                    Ok(self.visit_list(expr.clone())?)
+                }
             }
             Expr::FunctionDeclare { body, params } => {
                 let idx_func = self.make_function(body.clone(), params.clone());
+
                 let reg_value = self
                     .get_register()
                     .expect("Error in get register: the value");
+
                 self.emit_ins(OpCode::MAKEFUNC.encode(vec![
                     reg_value as u32,
                     idx_func.try_into().expect("Error when convert idx_func to u32"),
                 ]));
-                reg_value
+
+                Ok(reg_value)
             }
             Expr::FunctionCall { name, args } => {
                 if let Some(function_ref) = self.global_functions.get(name) {
@@ -161,7 +192,7 @@ impl BytecodeGen {
                     };
 
                     for arg in args {
-                        let reg_arg = &self.emit_expr(arg);
+                        let reg_arg = &self.visit_expr(arg, false)?;
 
                         self.emit_ins(OpCode::PUSHARG.encode(vec![*reg_arg as u32]));
 
@@ -194,50 +225,16 @@ impl BytecodeGen {
 
                     self.free_register(reg_func_name as usize);
                     self.free_register(reg_dist_result as usize);
-                    reg_dist_result
+                    Ok(reg_dist_result)
                 } else {
-                    1
+                    Err(BytecodeGenerationError::NotFoundFunction {  })
                 }
             }
             expr => panic!("Error: emit_expr, not implement yet {:?}", expr),
         }
     }
 
-    pub fn visit_expr(&mut self, expr: Expr) {
-        match expr {
-            Expr::Table { .. } => {
-                self.visit_table(expr);
-            }
-            Expr::List { .. } => {
-                self.visit_list(expr);
-            }
-            Expr::LiteralString(str) => {
-                let reg = self.get_register().expect("Error in get register");
-                let const_idx = self.make_const(Constant::String(str.clone()));
-
-                self.emit_ins(OpCode::LOADCONST.encode(vec![
-                    reg as u32,
-                    const_idx.try_into().expect("Error when convert idx_const to u32"),
-                ]));
-
-                self.emit_ins(OpCode::RETURN.encode(vec![reg as u32]));
-            }
-            Expr::Number(num) => {
-                let reg = self.get_register().expect("Error in get register");
-                let const_idx = self.make_const(Constant::Number(num));
-
-                self.emit_ins(OpCode::LOADCONST.encode(vec![
-                    reg as u32,
-                    const_idx.try_into().expect("Error when convert idx_const to u32"),
-                ]));
-
-                self.emit_ins(OpCode::RETURN.encode(vec![reg as u32]));
-            }
-            _ => panic!("Not implement yet"),
-        }
-    }
-
-    fn visit_table(&mut self, expr: Expr) {
+    fn visit_table(&mut self, expr: Expr) -> Result<u8, BytecodeGenerationError> {
         if let Expr::Table { fields } = expr {
             let reg_table = self.get_register().expect("Error in get register: table");
             self.emit_ins(OpCode::MAKETABLE.encode(vec![reg_table as u32]));
@@ -252,7 +249,7 @@ impl BytecodeGen {
                     idx_const.try_into().expect("Error when convert idx_const to u32"),
                 ]));
 
-                let reg_value = self.emit_expr(value);
+                let reg_value = self.visit_expr(value, true)?;
 
                 self.emit_ins(OpCode::SETATTR.encode(vec![
                     reg_table as u32,
@@ -265,17 +262,19 @@ impl BytecodeGen {
             }
 
             self.free_register(reg_table as usize);
-            self.emit_ins(OpCode::RETURN.encode(vec![reg_table as u32]));
+            Ok(reg_table)
+        } else {
+            Err(BytecodeGenerationError::UnexpectExpr { message: "Expect Table".into() })
         }
     }
 
-    fn visit_list(&mut self, expr: Expr) {
+    fn visit_list(&mut self, expr: Expr) -> Result<u8, BytecodeGenerationError>{
         if let Expr::List { items } = expr {
             let reg_list = self.get_register().expect("Error in get register: list");
             self.emit_ins(OpCode::MAKELIST.encode(vec![reg_list as u32]));
 
             for value in items {
-                let reg_value = self.emit_expr(&value);
+                let reg_value = self.visit_expr(&value, true)?;
 
                 self.emit_ins(OpCode::ADDLIST.encode(vec![reg_list as u32, reg_value as u32]));
 
@@ -283,11 +282,13 @@ impl BytecodeGen {
             }
 
             self.free_register(reg_list as usize);
-            self.emit_ins(OpCode::RETURN.encode(vec![reg_list as u32]));
+            Ok(reg_list)
+        } else {
+            Err(BytecodeGenerationError::UnexpectExpr { message: "Expect List".into() })
         }
     }
 
-    fn visit_function(&mut self) {
+    fn visit_function(&mut self) ->Result<(), BytecodeGenerationError>{
         let mut idx = 0;
         while idx < self.functions.len() {
             self.set_offset_func(idx, self.ins_count);
@@ -307,14 +308,16 @@ impl BytecodeGen {
                 reg_params.push(reg_param as usize);
             }
 
-            let reg_value = self.emit_expr(&function.body);
+            let reg_value = self.visit_expr(&function.body,false)?;
 
             self.free_registers(reg_params);
             self.emit_ins(OpCode::RETURN.encode(vec![reg_value as u32]));
+            self.free_register(reg_value as usize);
             self.context_var.clear();
 
             idx += 1;
         }
+        Ok(())
     }
 
     pub fn add_const_to_binary(&mut self, bytes: &mut Vec<u8>) {
@@ -404,22 +407,23 @@ impl BytecodeGen {
         bytes.extend_from_slice(&total_byte.to_be_bytes());
     }
 
-    pub fn visit_remain_thunk(&mut self) {
+    pub fn visit_remain_thunk(&mut self) -> Result<(), BytecodeGenerationError>{
         let mut idx = 0;
         while idx < self.thunks.len() {
             match self.thunks[idx].expr {
                 Expr::Table { .. } => {
                     self.set_offset_thunk(idx, self.ins_count);
-                    self.visit_table(self.thunks[idx].expr.clone());
+                    self.visit_table(self.thunks[idx].expr.clone())?;
                 }
                 Expr::List { .. } => {
                     self.set_offset_thunk(idx, self.ins_count);
-                    self.visit_list(self.thunks[idx].expr.clone());
+                    self.visit_list(self.thunks[idx].expr.clone())?;
                 }
                 _ => panic!("Not Impliment Yet"),
             }
             idx += 1;
         }
+        Ok(())
     }
 
     pub fn make_thunk(&mut self, expr: Expr) -> usize {

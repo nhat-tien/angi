@@ -30,7 +30,9 @@ pub fn index(args: &[String]) -> Result<(), CompilationError>{
 
     optimization(&mut ast);
 
-    let bytecode = BytecodeGen::new().get_binary(ast);
+    let bytecode = BytecodeGen::new().get_binary(ast).map_err(|err| {
+        CompilationError::BytecodeGenerationError(err)
+    })?;
 
     let mut file = File::options()
         .create(true)

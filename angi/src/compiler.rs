@@ -21,5 +21,9 @@ pub fn compile(src: String) -> Result<Vec<u8>, CompilationError> {
 
     optimization::optimization(&mut ast);
 
-    Ok(bytecode_genaration.get_binary(ast))
+    let byte = bytecode_genaration.get_binary(ast).map_err(|err| {
+        CompilationError::BytecodeGenerationError(err)
+    })?;
+
+    Ok(byte)
 }

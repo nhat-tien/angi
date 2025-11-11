@@ -21,6 +21,16 @@ pub enum CompilationError {
     IOError {
         message: String
     },
-    ParseError(ParseError)
+    ParseError(ParseError),
+    BytecodeGenerationError(BytecodeGenerationError)
+}
+
+#[derive(Debug)]
+pub enum BytecodeGenerationError {
+    UnexpectExpr {
+        message: String
+    },
+    NotFoundVariable {},
+    NotFoundFunction {}
 }
 
