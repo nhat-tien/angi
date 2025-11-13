@@ -1,0 +1,20 @@
+{
+
+  htmlTemplate = (path) => 
+  {
+     type = "htmlTemplate"; 
+     path = path;
+  };
+
+  html = (html) => 
+    { 
+       type = "html"; 
+       html = html;
+    };
+
+  json = (body) => 
+    { 
+       type = "json"; 
+       body = body;
+    };
+};

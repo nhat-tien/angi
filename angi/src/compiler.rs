@@ -1,4 +1,4 @@
-use bytecode::BytecodeGen;
+use bytecode::{load_global, BytecodeGen};
 use error::CompilationError;
 use lexer::Lexer;
 use parser::parse;
@@ -17,7 +17,10 @@ pub fn compile(src: String) -> Result<Vec<u8>, CompilationError> {
 
     let mut ast = parse(&mut lexer).map_err(|err| { CompilationError::ParseError(err) })?;
 
-    let mut bytecode_genaration = BytecodeGen::new();
+    let global_func = load_global();
+
+    let mut bytecode_genaration = BytecodeGen::new()
+          .with_global_func(global_func);
 
     optimization::optimization(&mut ast);
 

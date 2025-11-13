@@ -344,8 +344,8 @@ impl BytecodeGen {
         let const_len_in_bytes = self.get_constant_len_in_bytes();
         let thunk_offset = const_len_in_bytes + METADATA_BYTES;
         let function_offset = thunk_offset + (self.thunks.len() as u32 * 4);
-        let global_func_table_offset = function_offset + (self.global_function_in_used.len() as u32 * 8);
-        let code_offset = function_offset + (self.functions.len() as u32 * 8);
+        let global_func_table_offset = function_offset + (self.functions.len() as u32 * 8);
+        let code_offset = global_func_table_offset + (self.global_function_in_used.len() as u32 * 8);
 
         bytes.extend_from_slice(&MAGIC_NUMBER.to_be_bytes());
         bytes.extend_from_slice(&VERSION.to_be_bytes());
@@ -413,11 +413,13 @@ impl BytecodeGen {
             match self.thunks[idx].expr {
                 Expr::Table { .. } => {
                     self.set_offset_thunk(idx, self.ins_count);
-                    self.visit_table(self.thunks[idx].expr.clone())?;
+                    let reg = self.visit_table(self.thunks[idx].expr.clone())?;
+                    self.emit_ins(OpCode::RETURN.encode(vec![reg as u32]));
                 }
                 Expr::List { .. } => {
                     self.set_offset_thunk(idx, self.ins_count);
-                    self.visit_list(self.thunks[idx].expr.clone())?;
+                    let reg = self.visit_list(self.thunks[idx].expr.clone())?;
+                    self.emit_ins(OpCode::RETURN.encode(vec![reg as u32]));
                 }
                 _ => panic!("Not Impliment Yet"),
             }

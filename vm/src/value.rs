@@ -5,6 +5,7 @@ mod function;
 pub use list::List;
 pub use table::Table;
 pub use function::Arg;
+pub use function::Function;
 
 use crate::error::VmError;
 use std::fmt;
@@ -29,7 +30,7 @@ impl Clone for Value {
             Self::String(arg0) => Self::String(arg0.clone()),
             Self::Table(arg0) => Self::Table(arg0.clone()),
             Self::Thunk(arg0) => Self::Thunk(*arg0),
-            Self::Function(arg0) => Self::Thunk(*arg0),
+            Self::Function(arg0) => Self::Function(*arg0),
             Self::List(arg0) => Self::List(arg0.clone()),
             Self::None => Self::None,
         }
@@ -63,12 +64,20 @@ impl Value {
     pub fn val<T>(self) -> Result<T, VmError> where T: FromValue {
         T::from_value(self)
     }
+
+    pub fn from_raw<T>(raw: T) -> Value where T: ToValue {
+        raw.to_value()
+    }
 }
 
 
 
 pub trait FromValue: Sized + Clone {
     fn from_value(v: Value) -> Result<Self, VmError>;
+}
+
+pub trait ToValue: Sized + Clone {
+    fn to_value(self) -> Value;
 }
 
 impl FromValue for i64 {
@@ -82,6 +91,12 @@ impl FromValue for i64 {
     }
 }
 
+impl ToValue for i64 {
+    fn to_value(self) -> Value {
+        Value::Int(self)
+    }
+}
+
 impl FromValue for String {
     fn from_value(v: Value) -> Result<Self, VmError> {
         match v {
@@ -90,6 +105,41 @@ impl FromValue for String {
                 message: generate_error_message_when_mismatch_casting(v, "String".into()),
             }),
         }
+    }
+}
+
+impl ToValue for String {
+    fn to_value(self) -> Value {
+        Value::String(self)
+    }
+}
+
+
+pub trait ToArgValue: Sized + Clone {
+    fn to_value(self) -> Vec<Value>;
+}
+
+impl ToArgValue for () {
+    fn to_value(self) -> Vec<Value> {
+        vec![]
+    }
+}
+
+impl<A: ToValue> ToArgValue for (A,) {
+    fn to_value(self) -> Vec<Value> {
+        vec![self.0.to_value()]
+    }
+}
+
+impl<A: ToValue, B: ToValue> ToArgValue for (A, B) {
+    fn to_value(self) -> Vec<Value> {
+        vec![self.0.to_value(), self.1.to_value()]
+    }
+}
+
+impl<A: ToValue, B: ToValue, C: ToValue> ToArgValue for (A, B, C) {
+    fn to_value(self) -> Vec<Value> {
+        vec![self.0.to_value(), self.1.to_value(), self.2.to_value()]
     }
 }
 

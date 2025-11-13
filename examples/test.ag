@@ -1,3 +1,13 @@
 {
-    port = () => htmlTemplate("./index.html");
+    port = 3030;
+    routes = [
+       {
+           path = "/";
+           handler = "Message 1";
+       },
+       {
+           path = "/Hello";
+           handler = "Message Hello";
+       }
+    ];
 };

@@ -12,6 +12,7 @@ pub enum Token {
     RightArrow,      // ->
     EqualRightArrow, // => 
     Bar,             // |
+
     // Operator
     Plus,            // +
     Dash,            // -
@@ -19,6 +20,7 @@ pub enum Token {
     Slash,           // / 
     Percent,         // %
     Pipe,            // |>
+    Bind,            // >>=
     
     Name(String),
     String(String),

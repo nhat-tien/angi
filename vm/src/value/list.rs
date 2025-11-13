@@ -2,7 +2,7 @@ use crate::{error::VmError, vm::VM};
 
 use super::{generate_error_message_when_mismatch_casting, FromValue, Value};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct List<T: FromValue> {
     raw_child: Option<Vec<T>>,
     value_child: Vec<Value>

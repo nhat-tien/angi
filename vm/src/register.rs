@@ -32,7 +32,7 @@ impl Register {
         }
     }
 
-    pub fn get(&self, idx: usize) -> Option<Value>{
+    pub fn get(&self, idx: usize) -> Option<Value> {
         self.regs.get(idx).cloned()
     }
 

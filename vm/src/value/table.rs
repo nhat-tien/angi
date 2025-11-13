@@ -1,7 +1,7 @@
 use crate::{error::VmError, tree::Tree};
 use super::{generate_error_message_when_mismatch_casting, FromValue, Value};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Table {
     child: Box<Tree<Value>>
 }
@@ -9,7 +9,8 @@ pub struct Table {
 impl Table {
 
     pub fn get<T>(&self, key: &str) -> Option<T> where T : FromValue {
-        self.child.get(vec![key]).map(|v| T::from_value(v).ok())?
+        let result = self.child.get(vec![key]);
+        result.map(|v| T::from_value(v).ok())?
     }
 }
 

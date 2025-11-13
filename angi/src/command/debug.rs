@@ -2,7 +2,7 @@ use std::fs::{self, File};
 use std::io::{BufReader, Read, Write};
 
 use instructions::extract_opcode;
-use vm::value::{List, Table};
+use vm::value::{Function, List, Table};
 use vm::vm::VM;
 
 use crate::compiler::bytecode::load_global;
@@ -52,15 +52,23 @@ pub fn index(args: &[String]) {
                 Err(err) => panic!("{}", err)
             };
 
-            let list_routes = vm.eval::<List<Table>>("routes").expect("ckdsn");
-            let list_routes_iter = list_routes.iter().unwrap();
 
-            for route in list_routes_iter {
-                let path = route.get::<String>("path").unwrap();
-                let message = route.get::<String>("handler").unwrap();
-                println!("path {path}");
-                println!("message {message}");
-            };
+            let handler = vm.eval::<Function>("port").expect("ckdsn");
+            let result : String = handler.call(&mut vm, ()).expect("dnejd");
+
+            println!("{}",result);
+
+            let mut list_routes = vm.eval::<List<Table>>("routes").expect("ckdsn");
+            list_routes.force(&mut vm);
+
+
+            // let list_routes_iter = list_routes.iter().unwrap();
+            
+            // let mut function = first.get::<Function>("handler").unwrap();
+
+            // let html: String = function.eval(&mut vm, (String::from("Hello"),)).unwrap();
+
+
         }
         "writebc" => {
             let source_file_path = &args[3];

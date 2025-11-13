@@ -226,12 +226,15 @@ fn expr_function(
     lexer: &mut Peekable<&mut Lexer>,
     params: Vec<String>,
 ) -> Result<Expr, ParseError> {
+
     if !matches!(lexer.next(), Some(Ok((_, Token::EqualRightArrow, (_, _))))) {
         return Err(ParseError {
             error: String::from("Parse Error: Expect '=>' token"),
             location: (0, 0),
         });
     };
+
+    skip_new_line(lexer);
 
     let body = expr_with_bp(lexer, 0)?;
 

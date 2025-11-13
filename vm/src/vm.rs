@@ -7,7 +7,7 @@ use crate::utils::{
     read_i64, read_n_bytes_from_end_of_file, read_str_with_len, read_u8, read_u32,
     read_u32_from_end_of_file,
 };
-use crate::value::{FromValue, Value};
+use crate::value::{FromValue, ToArgValue, Value};
 use instructions::{MAGIC_NUMBER, OpCode, extract_opcode};
 use std::collections::{HashMap, VecDeque};
 use std::fs::File;
@@ -18,6 +18,7 @@ pub struct VM {
     const_pool: HashMap<usize, ConstantValue>,
     thunk_table: HashMap<usize, u32>,
     function_table: HashMap<usize, Function>,
+    global_function_table: HashMap<String, usize>,
     bytes: Vec<u8>,
     args_queue: VecDeque<Value>
 }
@@ -29,6 +30,7 @@ impl Default for VM {
             const_pool: HashMap::new(),
             thunk_table: HashMap::new(),
             function_table: HashMap::new(),
+            global_function_table: HashMap::new(),
             bytes: vec![],
             metadata: MetaData::default(),
             args_queue: VecDeque::new()
@@ -76,6 +78,8 @@ impl VM {
         self.load_metadata()?;
         self.load_const()?;
         self.load_thunk_table()?;
+        self.load_function_table()?;
+        self.load_global_function_table()?;
         Ok(())
     }
 
@@ -108,7 +112,7 @@ impl VM {
         }
 
         if let Value::Thunk(thunk_idx) = value {
-            value = self.eval_thunk(thunk_idx)?
+            value = self.eval_thunk(thunk_idx)?;
         };
 
         T::from_value(value)
@@ -149,6 +153,22 @@ impl VM {
             read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
                 message: "Error in get thunk_size".into(),
             })?;
+        let function_offset =
+            read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
+                message: "Error in get function_offset".into(),
+            })?;
+        let function_size =
+            read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
+                message: "Error in get function_size".into(),
+            })?;
+        let global_function_offset =
+            read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
+                message: "Error in get function_offset".into(),
+            })?;
+        let global_function_size =
+            read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
+                message: "Error in get function_size".into(),
+            })?;
         let code_offset =
             read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
                 message: "Error in get code_offset".into(),
@@ -165,6 +185,10 @@ impl VM {
             const_size,
             thunk_offset,
             thunk_size,
+            function_offset,
+            function_size,
+            global_function_offset,
+            global_function_size,
             code_offset,
             code_size,
         };
@@ -242,6 +266,60 @@ impl VM {
         Ok(())
     }
 
+    pub fn load_function_table(&mut self) -> Result<(), VmError> {
+        let function_size = self.metadata.function_size;
+        let function_offset = self.metadata.function_offset;
+
+        let mut cursor = function_offset as usize;
+
+        for i in 1..(function_size + 1) {
+            let nargs =
+                read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
+                    message: "Error in get function_narg".into(),
+                })?;
+            let offset =
+                read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
+                    message: "Error in get function_body".into(),
+                })?;
+
+            self.function_table.insert(i as usize, Function { nargs, offset: offset * 4 });
+        }
+
+        Ok(())
+    }
+
+    pub fn load_global_function_table(&mut self) -> Result<(), VmError> {
+        let global_function_size = self.metadata.global_function_size;
+        let global_function_offset = self.metadata.global_function_offset;
+        
+
+        let mut cursor = global_function_offset as usize;
+
+        for _ in 1..(global_function_size + 1) {
+            let const_idx =
+                read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
+                    message: "Error in get const_idx".into(),
+                })?;
+
+            let function_idx =
+                read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
+                    message: "Error in get function_idx".into(),
+                })?;
+
+            let const_name = self.const_pool
+                .get(&(const_idx as usize))
+                .ok_or_else(|| VmError::UnexpectedError {
+                    message: format!("Error in get const_name {const_idx}"),
+                })?;
+
+            if let ConstantValue::String(name) = const_name {
+                self.global_function_table.insert(name.clone(), function_idx as usize);
+            }
+        }
+
+        Ok(())
+    }
+
     pub fn get_thunk_table(&self) -> HashMap<usize, u32> {
         self.thunk_table.clone()
     }
@@ -256,7 +334,6 @@ impl VM {
                 read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
                     message: "Error in get ins value".into(),
                 })?;
-
             let opcode = extract_opcode(ins).ok_or_else(|| VmError::UnexpectedError {
                 message: "Error in get opcode".into(),
             })?;
@@ -315,28 +392,61 @@ impl VM {
                 }
                 OpCode::MAKEFUNC => {
                     let params = OpCode::MAKEFUNC.decode(ins);
-                    let reg = params[0];
-                    self.registers.set(reg as usize, Value::Function(reg));
+                    self.registers.set(params[0] as usize, Value::Function(params[1]));
                 }
                 OpCode::LOADARG => {
                     let params = OpCode::LOADARG.decode(ins);
-                    let reg = params[0];
                     let arg = self.args_queue.pop_front().ok_or_else(|| {
                         VmError::UnexpectedError {
                             message: "Error in pop args_queue".into(),
                         }
                     })?;
-                    self.registers.set(reg as usize, arg);
+                    self.registers.set(params[0] as usize, arg);
                 }
                 OpCode::PUSHARG => {
                     let params = OpCode::PUSHARG.decode(ins);
-                    let reg = params[0];
-                    let value = self.registers.get(reg as usize).ok_or_else(|| {
+                    let value = self.registers.get(params[0] as usize).ok_or_else(|| {
                         VmError::UnexpectedError {
                             message: "Error in get value in PUS".into(),
                         }
                     })?;
                     self.args_queue.push_back(value);
+                }
+                OpCode::CALL => {
+                    let params = OpCode::CALL.decode(ins);
+                    match self.registers.get(params[1] as usize).ok_or_else(|| {
+                        VmError::UnexpectedError {
+                            message: "Error in get value in PUS".into(),
+                        }
+                    })? {
+                        Value::String(name) => {
+                            let function_idx = self.global_function_table.get(&name).ok_or_else(|| {
+                                VmError::NotFoundFunction {
+                                    message: format!("not found {name}")
+                                }
+                             })?;
+                            let function = self.function_table.get(function_idx).ok_or_else(|| {
+                                VmError::NotFoundFunction {
+                                    message: format!("not found {function_idx}")
+                                }
+                             })?;
+                            let cursor = (function.offset + self.metadata.code_offset) as usize;
+                            let result = self.handle_instruction(cursor)?;
+                            self.registers.set(params[0] as usize, result);
+                        }
+                        Value::Function(function_idx) => {
+                            let function = self.function_table.get(&(function_idx as usize)).ok_or_else(|| {
+                                VmError::NotFoundFunction {
+                                    message: format!("not found {function_idx}")
+                                }
+                             })?;
+                            let cursor = (function.offset + self.metadata.code_offset) as usize;
+                            let result = self.handle_instruction(cursor)?;
+                            self.registers.set(params[0] as usize, result);
+                        }
+                        _ => {}
+                    }
+
                 }
                 OpCode::MAKETHUNK => {
                     let params = OpCode::MAKETHUNK.decode(ins);
@@ -375,12 +485,33 @@ impl VM {
     fn eval_thunk(&mut self, thunk_idx: u32) -> Result<Value, VmError> {
         let code_offset = self.metadata.code_offset;
         let mut value: Value = Value::None;
-
         if let Some(thunk_offset) = self.thunk_table.get(&(thunk_idx as usize)) {
             let cursor = (*thunk_offset + code_offset) as usize;
             value = self.handle_instruction(cursor)?;
         };
 
         Ok(value)
+    }
+
+    pub fn eval_function<T>(&mut self, function_idx: u32, args: T) -> Result<Value, VmError> where T : ToArgValue {
+        let code_offset = self.metadata.code_offset;
+        let mut value: Value = Value::None;
+
+        for arg in args.to_value() {
+            self.push_arg(arg);
+        }
+
+        if let Some(function) = self.function_table.get(&(function_idx as usize)) {
+            let cursor = (function.offset + code_offset) as usize;
+            value = self.handle_instruction(cursor)?;
+        };
+
+        self.args_queue.clear();
+
+        Ok(value)
+    }
+
+    fn push_arg(&mut self, value: Value) {
+        self.args_queue.push_back(value);
     }
 }

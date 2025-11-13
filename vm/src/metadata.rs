@@ -6,6 +6,10 @@ pub struct MetaData {
     pub const_size: u32,
     pub thunk_offset: u32,
     pub thunk_size: u32,
+    pub function_offset: u32,
+    pub function_size: u32,
+    pub global_function_offset: u32,
+    pub global_function_size: u32,
     pub code_offset: u32,
     pub code_size: u32
 }

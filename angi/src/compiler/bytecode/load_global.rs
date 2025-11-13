@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs};
+use std::{collections::HashMap, fs, path::Path};
 
 use crate::compiler::{ast::Expr, lexer::Lexer, parser::parse};
 
@@ -7,8 +7,11 @@ use super::function::Function;
 pub fn load_global() -> HashMap<String, Function> {
 
     let mut result: HashMap<String, Function> = HashMap::new();
+
+    let root = env!("CARGO_MANIFEST_DIR");
+    let path = Path::new(root).join("native_lib/global.ag");
     
-    let content = match fs::read_to_string("./native_lib/global.ag") {
+    let content = match fs::read_to_string(path) {
         Ok(content) => content,
         Err(err) => panic!("Cannot open file {err:?}"),
     };
