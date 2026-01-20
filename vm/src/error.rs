@@ -1,11 +1,19 @@
 use std::fmt;
 
+use archive::ExtractorError;
+
 #[derive(Debug)]
 pub enum VmError {
     ValueTypeMismatch { message: String },
     UnexpectedError { message: String },
     InstructionExecution { message: String },
     NotFoundFunction { message: String },
+    ErrorInGetOpcode {
+        message: String,
+        ins: u32,
+        cursor: usize
+    },
+    ExtractorError { err: ExtractorError }
 }
 
 impl fmt::Display for VmError {
@@ -18,6 +26,12 @@ impl fmt::Display for VmError {
             }
             VmError::NotFoundFunction { message } => {
                 write!(f, "[NotFoundFunction] {message}")
+            }
+            VmError::ErrorInGetOpcode { message, ins, cursor } => {
+                write!(f, "[ErrorInGetOpcode] {message}, ins: {ins}, cursor: {cursor}")
+            }
+            _e => {
+                write!(f, "Error not implement display yet")
             }
         }
     }

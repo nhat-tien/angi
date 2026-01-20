@@ -26,6 +26,7 @@ pub fn read_u32(bytes: &[u8], cursor: &mut usize) -> Option<u32> {
     }
 }
 
+
 pub fn read_u8(bytes: &[u8], cursor: &mut usize) -> Option<u8> {
     if let Some(slice) = bytes
         .get(*cursor..*cursor + 1)
@@ -38,6 +39,18 @@ pub fn read_u8(bytes: &[u8], cursor: &mut usize) -> Option<u8> {
         None
     }
 }
+
+pub fn read_n_bytes_from_cursor(bytes: &[u8], cursor: usize, n: usize) -> Option<Vec<u8>> {
+    if let Some(slice) = bytes
+        .get(cursor..cursor + n)
+    {
+        let arr_of_bytes: &[u8] = slice;
+        Some(arr_of_bytes.to_vec())
+    } else {
+        None
+    }
+}
+
 
 pub fn read_str_with_len(bytes: &[u8], cursor: &mut usize, str_len: usize) -> Option<String>{
     let mut string = String::from("");
@@ -169,3 +182,5 @@ mod tests {
         Ok(())
     }
 }
+
+

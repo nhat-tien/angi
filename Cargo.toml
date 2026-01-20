@@ -1,3 +1,5 @@
 [workspace]
 resolver = "3"
-members = [ "angi", "instructions", "server", "vm"]
+members = [ "angi", "angi_modules/template", "archive", "instructions", "server", "shared_utils", "vm"]
+
+default-members = [ "angi" ]

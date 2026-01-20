@@ -5,6 +5,6 @@ edition = "2024"
 
 [dependencies]
 instructions = { path = "../instructions" }
+shared_utils = { path = "../shared_utils" }
+archive = { path = "../archive" }
 
-[dev-dependencies]
-tempfile = "3"

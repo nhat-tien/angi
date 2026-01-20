@@ -35,3 +35,34 @@ fn lexing_test_table() {
         Ok((5, Token::EndOfFile, (1,1)))
     ])
 }
+
+
+#[test]
+fn lexing_string_with_escape() {
+    let lex = Lexer::new_from_str(r#"{ name = "My name is \"Tien\"";}"#);
+    let tokens: Vec<LexResult> = lex.collect();
+    assert_eq!(tokens, vec![
+        Ok((1, Token::LeftBrace, (1, 1))),
+        Ok((1, Token::Name("name".into()), (3, 6))),
+        Ok((1, Token::Equal, (8, 8))),
+        Ok((1, Token::String("My name is \\\"Tien\\\"".into()), (10, 30))),
+        Ok((1, Token::Semicolon, (31, 31))),
+        Ok((1, Token::RightBrace, (32, 32))),
+        Ok((1, Token::EndOfFile, (33, 33)))
+    ])
+}
+
+#[test]
+fn lexing_test_empty_string() {
+    let lex = Lexer::new_from_str(r#"{ name = "";}"#);
+    let tokens: Vec<LexResult> = lex.collect();
+    assert_eq!(tokens, vec![
+        Ok((1, Token::LeftBrace, (1, 1))),
+        Ok((1, Token::Name("name".into()), (3, 6))),
+        Ok((1, Token::Equal, (8, 8))),
+        Ok((1, Token::String("".into()), (10, 11))),
+        Ok((1, Token::Semicolon, (12, 12))),
+        Ok((1, Token::RightBrace, (13, 13))),
+        Ok((1, Token::EndOfFile, (14, 14)))
+    ])
+}

@@ -1,7 +1,9 @@
 use std::fs::{self, File};
-use std::io::{BufReader, Read, Write};
+use std::io::{BufReader, Write};
 
+use archive::{Archiver, Extractor};
 use instructions::extract_opcode;
+use shared_utils::read_from_buf_reader::{read_i64, read_u32, read_u8};
 use vm::value::{Function, List, Table};
 use vm::vm::VM;
 
@@ -63,7 +65,7 @@ pub fn index(args: &[String]) {
 
 
             // let list_routes_iter = list_routes.iter().unwrap();
-            
+
             // let mut function = first.get::<Function>("handler").unwrap();
 
             // let html: String = function.eval(&mut vm, (String::from("Hello"),)).unwrap();
@@ -108,6 +110,56 @@ pub fn index(args: &[String]) {
             let f = File::open(source_file_path).expect("Cant open file");
             let mut r = BufReader::new(f);
             print_bytecode(&mut r);
+        }
+        "writear" => {
+            let source_file_path = &args[3];
+            let dist_file_path = &args[4];
+
+            let content = match fs::read_to_string(source_file_path) {
+                Ok(content) => content,
+                Err(err) => panic!("Cannot open file {err:?}"),
+            };
+
+            let mut lexer = Lexer::new(content.chars());
+
+            let mut ast = match parse(&mut lexer) {
+                Ok(ast) => ast,
+                Err(err) => panic!("Err in parse {err:?}"),
+            };
+
+            let global_func = load_global();
+
+            let mut bytecode_genaration = BytecodeGen::new()
+                  .with_global_func(global_func);
+
+            optimization(&mut ast);
+
+            let content = bytecode_genaration.get_binary(ast).unwrap_or_else(|err| {
+                panic!("{err:?}");
+            });
+
+            let mut archiver = Archiver::new();
+
+            archiver.archive(content, "bytecode");
+
+            let payload = archiver.get_bytes().unwrap_or_else(|err| {
+                panic!("{err:?}");
+            });
+
+            let mut file = File::create(dist_file_path).unwrap_or_else(|err| {
+                panic!("Cannot create file {err:?}");
+             });
+
+            let _ = file.write_all(&payload);
+        }
+        "readar" => {
+            let source_file_path = &args[3];
+            let f = File::open(source_file_path).expect("Cant open file");
+            let extractor = Extractor::init_from_file(f).unwrap_or_else(|err| {
+                panic!("Cannot extractor {err:?}");
+             });
+
+            extractor.print_debug();
         }
         _ => {
             println!("Command not exist");
@@ -167,9 +219,9 @@ fn read_const(r: &mut BufReader<File>, mut const_size: u32) {
     while const_size > 0 {
         let ( const_type, const_type_u32) = read_u8(r);
         print!("{:<PADDING$}{}", "CONST TYPE", const_type);
-        
+
         match const_type_u32 {
-            0_u8 => { 
+            0_u8 => {
                 println!(": int");
                 let (number_in_b, num) = read_i64(r);
                 println!("{:<PADDING$}{} : {}", "INT", number_in_b, num);
@@ -225,39 +277,13 @@ fn read_global_function(r: &mut BufReader<File>, mut global_function_size: u32) 
 }
 
 fn read_instruction(r: &mut BufReader<File>, mut code_size: u32) {
+    let mut count = 1;
     while code_size > 0 {
         let ( ins , number ) = read_u32(r);
         let opcode = extract_opcode(number).unwrap();
-        println!("{:<PADDING$}{}: {:?}", "INS", ins, opcode);
-       code_size -= 1; 
+        let ins_count = format!("{} {}", "INS", count);
+        println!("{:<PADDING$}{}: {:?}", ins_count, ins, opcode);
+        code_size -= 1;
+        count += 1;
     }
-}
-
-fn read_i64(r: &mut BufReader<File>) -> (String, i64){
-    let mut buf = [0u8; 8];
-    r.read_exact(&mut buf).expect("Error in read byte");
-    let num = i64::from_be_bytes(buf);
-    (u8_slice_to_binary_string(&buf), num)
-}
-
-fn read_u32(r: &mut BufReader<File>) -> (String, u32){
-    let mut buf = [0u8; 4];
-    r.read_exact(&mut buf).expect("Error in read byte");
-    let num = u32::from_be_bytes(buf);
-    (u8_slice_to_binary_string(&buf), num)
-}
-
-fn read_u8(r: &mut BufReader<File>) -> (String, u8){
-    let mut buf = [0u8; 1];
-    r.read_exact(&mut buf).expect("Error in read byte");
-    let num = u8::from_be_bytes(buf);
-    (u8_slice_to_binary_string(&buf), num)
-}
-
-fn u8_slice_to_binary_string(bytes: &[u8]) -> String {
-    let mut binary_strings = Vec::new();
-    for byte in bytes {
-        binary_strings.push(format!("{:08b}", byte));
-    }
-    binary_strings.join(" ")
 }

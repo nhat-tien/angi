@@ -1,3 +1,5 @@
 /target
 /server_target
 debug.txt
+
+*.bc

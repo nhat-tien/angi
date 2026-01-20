@@ -1,23 +1,51 @@
-use std::{env, fs, path::PathBuf, process::Command };
+use std::{env, fs, path::PathBuf, process::Command};
 
 fn main() {
-   let workspace = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap())
-        .parent()
-        .unwrap()
-        .to_path_buf();
+    println!("cargo:rerun-if-changed=../server/src");
+    println!("cargo:rerun-if-changed=../server/Cargo.toml");
+    println!("cargo:rerun-if-changed=../vm/src");
+    println!("cargo:rerun-if-changed=../vm/Cargo.toml");
 
-    let status = Command::new("cargo")
-        .args(["build", "-p", "server", "--release", "--target-dir", "../server_target"])
-        .status()
-        .expect("Fail to build");
+    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let workspace = manifest_dir.parent().unwrap();
 
-    assert!(status.success());
+    let profile = env::var("PROFILE").unwrap(); // debug / release
+    let target = env::var("TARGET").ok();
 
-    let runtime_path = workspace.join("server_target/release/server");
+    let target_dir = workspace.join("server_target");
+
+    let mut cmd = Command::new("cargo");
+    cmd.arg("build")
+        .arg("-p")
+        .arg("server")
+        .arg("--target-dir")
+        .arg(&target_dir);
+
+    if profile == "release" {
+        cmd.arg("--release");
+    }
+
+    if let Some(t) = &target {
+        cmd.arg("--target").arg(t);
+    }
+
+    let status = cmd.status().expect("failed to invoke cargo");
+
+    assert!(status.success(), "server build failed");
+
+    let bin_name = if cfg!(windows) { "server.exe" } else { "server" };
+
+    let bin_path = match (&target, profile.as_str()) {
+        (Some(t), p) => target_dir.join(t).join(p).join(bin_name),
+        (None, p) => target_dir.join(p).join(bin_name),
+    };
+
+    assert!(bin_path.exists(), "server binary not found");
+
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let dest_path = out_dir.join("server");
+    let dst = out_dir.join(bin_name);
 
-    fs::copy(&runtime_path, &dest_path).expect("Fail to copy");
+    fs::copy(&bin_path, &dst).expect("failed to copy server");
 
-    println!("cargo:rustc-env=RUNTIME_PATH={}", dest_path.display());
+    println!("cargo:rustc-env=SERVER_PATH={}", dst.display());
 }

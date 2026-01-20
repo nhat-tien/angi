@@ -134,15 +134,21 @@ impl<'a> Lexer<'a>
     }
 
     fn is_string_continuation(&self) -> bool {
-        self.chr1
-            .map(|c| !matches!(c, '"'))
-            .unwrap_or(false)
+        match self.chr1 {
+            Some('"') => self.is_escaped(),
+            Some(_) => true,
+            None => false
+        }
     }
-    
+
     fn is_number_continuation(&self) -> bool {
         self.chr1
         .map(|c| matches!(c, '.' | '0'..='9' ))
         .unwrap_or(false)
+    }
+
+    fn is_escaped(&self) -> bool {
+        self.chr0.map(|c| matches!(c, '\\')).unwrap_or(false)
     }
 
     fn lex_name(&mut self) -> LexResult {
@@ -171,15 +177,12 @@ impl<'a> Lexer<'a>
         let line = self.get_line();
         let start_pos = self.get_pos();
 
-        self.move_next_char(); // Discard the "
-
         loop {
-            string.push(self.chr0.expect("lex_string"));
-
             if !self.is_string_continuation() {
                 break;
             }
             self.move_next_char();
+            string.push(self.chr0.expect("lex_string"));
         }
 
         self.move_next_char(); // Get end position of the last "

@@ -1,10 +1,8 @@
 [package]
-name = "angi"
+name = "archive"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-vm = { path = "../vm" }
 instructions = { path = "../instructions" }
-archive = { path = "../archive" }
 shared_utils = { path = "../shared_utils" }

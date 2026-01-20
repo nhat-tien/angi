@@ -22,7 +22,8 @@ pub enum CompilationError {
         message: String
     },
     ParseError(ParseError),
-    BytecodeGenerationError(BytecodeGenerationError)
+    BytecodeGenerationError(BytecodeGenerationError),
+    ArchiveError
 }
 
 #[derive(Debug)]

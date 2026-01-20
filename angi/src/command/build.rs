@@ -1,9 +1,12 @@
+static SERVER: &[u8] =
+    include_bytes!(concat!(env!("OUT_DIR"), "/server"));
+// static SERVER: &[u8] = include_bytes!(env!("RUNTIME_PATH"));
+
 use std::fs::{self, File, set_permissions};
 use std::io::{self, Write};
 use std::path::Path;
-
-static SERVER: &[u8] = include_bytes!(env!("RUNTIME_PATH"));
-
+use archive::Archiver;
+use crate::compiler::bytecode::load_global;
 use crate::compiler::error::CompilationError;
 use crate::compiler::{
     bytecode::BytecodeGen,
@@ -30,7 +33,11 @@ pub fn index(args: &[String]) -> Result<(), CompilationError>{
 
     optimization(&mut ast);
 
-    let bytecode = BytecodeGen::new().get_binary(ast).map_err(|err| {
+    let global_func = load_global();
+
+    let bytecode = BytecodeGen::new()
+        .with_global_func(global_func)
+        .get_binary(ast).map_err(|err| {
         CompilationError::BytecodeGenerationError(err)
     })?;
 
@@ -44,8 +51,16 @@ pub fn index(args: &[String]) -> Result<(), CompilationError>{
             }
         })?;
 
+    let mut archiver = Archiver::new();
+
+    archiver.archive(bytecode, "bytecode");
+
+    let payload = archiver.get_bytes().map_err(|_| {
+        CompilationError::ArchiveError
+    })?;
+
     file.write_all(SERVER).expect("Fail to write file");
-    file.write_all(&bytecode).expect("Fail to write file");
+    file.write_all(&payload).expect("Fail to write file");
     file.flush().expect("Fail to flush");
 
     let path = Path::new(&dist_file_path);

@@ -3,9 +3,9 @@ use crate::error::VmError;
 use crate::function::Function;
 use crate::metadata::MetaData;
 use crate::register::Register;
-use crate::utils::{
-    read_i64, read_n_bytes_from_end_of_file, read_str_with_len, read_u8, read_u32,
-    read_u32_from_end_of_file,
+use archive::Extractor;
+use shared_utils::read_byte::{
+    read_i64, read_str_with_len, read_u8, read_u32,
 };
 use crate::value::{FromValue, ToArgValue, Value};
 use instructions::{MAGIC_NUMBER, OpCode, extract_opcode};
@@ -57,18 +57,26 @@ impl VM {
             message: "error in open file itself".into(),
         })?;
 
-        let bytecode_size =
-            read_u32_from_end_of_file(&file).map_err(|_| VmError::UnexpectedError {
-                message: "error in get bytecode size".into(),
-            })?;
-
-        let bytes = read_n_bytes_from_end_of_file(&file, bytecode_size as u64).map_err(|_| {
-            VmError::UnexpectedError {
-                message: "error in get bytecode size".into(),
-            }
+        let extractor = Extractor::init_from_file(file).map_err(|e| VmError::ExtractorError {
+            err: e
         })?;
 
-        vm.load(bytes)?;
+        let bytecode = extractor.extract_blob("bytecode".into()).ok_or_else(|| VmError::UnexpectedError {
+            message: "Error in get bytecode".into(),
+        })?;
+
+        // let bytecode_size =
+        //     read_u32_from_end_of_file(&file).map_err(|_| VmError::UnexpectedError {
+        //         message: "error in get bytecode size".into(),
+        //     })?;
+        //
+        // let bytes = read_n_bytes_from_end_of_file(&file, bytecode_size as u64).map_err(|_| {
+        //     VmError::UnexpectedError {
+        //         message: "error in get bytecode size".into(),
+        //     }
+        // })?;
+
+        vm.load(bytecode)?;
 
         Ok(vm)
     }
@@ -127,8 +135,7 @@ impl VM {
 
         if magic_code != MAGIC_NUMBER {
             return Err(VmError::UnexpectedError {
-                message: "Magic code not
-                                        suitable"
+                message: "Magic code not suitable"
                     .into(),
             });
         };
@@ -177,6 +184,7 @@ impl VM {
             read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
                 message: "Error in code_size".into(),
             })?;
+
 
         self.metadata = MetaData {
             magic_code,
@@ -291,7 +299,7 @@ impl VM {
     pub fn load_global_function_table(&mut self) -> Result<(), VmError> {
         let global_function_size = self.metadata.global_function_size;
         let global_function_offset = self.metadata.global_function_offset;
-        
+
 
         let mut cursor = global_function_offset as usize;
 
@@ -334,8 +342,10 @@ impl VM {
                 read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
                     message: "Error in get ins value".into(),
                 })?;
-            let opcode = extract_opcode(ins).ok_or_else(|| VmError::UnexpectedError {
+            let opcode = extract_opcode(ins).ok_or_else(|| VmError::ErrorInGetOpcode {
                 message: "Error in get opcode".into(),
+                ins,
+                cursor
             })?;
 
             match opcode {

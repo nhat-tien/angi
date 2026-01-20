@@ -7,7 +7,15 @@
        },
        {
            path = "/Hello";
-           handler = "Message Hello";
+           handler = ({ todo }) =>
+               db
+                 .table("todo")
+                 .insert()
+       },
+       {
+           path = "/data";
+           handler = ({ todo }) =>
+               db
        }
     ];
 };

@@ -1,22 +1,28 @@
 use std::sync::{Arc, Mutex};
 
 use axum::{
-    Router, extract::State, http::StatusCode, response::Html, routing::get,
+    Router,
+    response::Html,
+    routing::get,
+    Json,
 };
-use vm::value::{List, Table};
+use vm::value::{Function, List, Table};
 use vm::{error::VmError, vm::VM};
 
 type Avm = Arc<Mutex<VM>>;
 
 #[tokio::main]
 async fn main() -> Result<(), VmError> {
-    let vm = VM::new_from_itself().map_err(|_| panic!("Cant initialize the vm"))?;
+    let mut vm = VM::new_from_itself().map_err(|e| panic!("Cant initialize the vm {:?}",e))?;
+
+    let port = vm.eval::<i64>("port")?;
+
+    let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", port))
+        .await
+        .unwrap();
 
     let avm = Arc::new(Mutex::new(vm));
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
-        .await
-        .unwrap();
 
     println!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app(avm)).await.unwrap();
@@ -28,23 +34,6 @@ fn app(vm: Avm) -> Router {
     build_router(vm).expect("Error in build router")
 }
 
-async fn handler(State(vm): State<Avm>) -> Result<Html<String>, (StatusCode, String)> {
-    let mut new_vm = vm.lock().unwrap();
-
-    let port = new_vm
-        .eval::<i64>("port")
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "csknjk".to_string()))?;
-
-    let message = new_vm
-        .eval::<String>("response.handler.response")
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "csknjk".to_string()))?;
-
-    let string = format!(
-        "<h1>Hello, World!</h1>
-                        <p>{port}</p><strong>{message}</strong"
-    );
-    Ok(Html(string))
-}
 fn build_router(vm: Avm) -> Result<Router, VmError> {
     let mut ready_vm = vm.lock().unwrap();
     let mut list_routes = ready_vm.eval::<List<Table>>("routes")?;
@@ -53,8 +42,44 @@ fn build_router(vm: Avm) -> Result<Router, VmError> {
 
     Ok(list_routes_iter.fold(Router::new(), |router, route| {
         let path = route.get::<String>("path").unwrap();
-        let message = route.get::<String>("handler").unwrap();
+        let function = route.get::<Function>("handler").unwrap();
+        let result: Table = function.call(&mut ready_vm, ()).unwrap();
 
-        router.route(&path, get(|| async { message }))
+        let type_of_handler = result.get::<String>("type").unwrap();
+
+        match type_of_handler.as_str() {
+            "html" => {
+                let html = result.get::<String>("html").unwrap();
+                router.route(&path, make_html_handler(html))
+            },
+            "htmlTemplate" => {
+                let path_template = result.get::<String>("path").unwrap();
+                router.route(&path, make_html_template_handler(path_template))
+            },
+            "json" => {
+                let json = result.get::<String>("body").unwrap();
+                router.route(&path, make_json_handler(json))
+            },
+            _ => todo!()
+        }
     }))
+}
+
+fn make_html_handler(html: String) -> axum::routing::MethodRouter {
+    get(move || {
+        async move { Html(html.clone()) }
+    })
+}
+
+fn make_html_template_handler(path: String) -> axum::routing::MethodRouter {
+    get(move || {
+        async move { Html(path.clone()) }
+    })
+}
+
+fn make_json_handler(json: String) -> axum::routing::MethodRouter {
+    let v: serde_json::Value = serde_json::from_str(&json).map_err(|e| e.to_string()).unwrap();
+    get(move || {
+        async move { Json(v) }
+    })
 }
