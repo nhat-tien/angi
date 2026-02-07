@@ -1,3 +1,6 @@
+let
+   name = "Tien";
+in
 {
     port = 3030;
     routes = [
@@ -7,15 +10,11 @@
        },
        {
            path = "/Hello";
-           handler = ({ todo }) =>
-               db
-                 .table("todo")
-                 .insert()
+           handler = () => html({ hello = name; });
        },
        {
            path = "/data";
-           handler = ({ todo }) =>
-               db
+           handler = () => todo;
        }
     ];
 };

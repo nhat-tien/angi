@@ -1,9 +1,12 @@
+let
+   name = "Tien":
+in
 {
     port = 3030;
     routes = [
        {
            path = "/";
-           handler = () => html("<h1>Hello</h1>");
+           handler = () => html(name);
        },
        {
            path = "/Hello";

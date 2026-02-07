@@ -9,8 +9,10 @@ use constant::Constant;
 use core::panic;
 use function::Function;
 use instructions::{MAGIC_NUMBER, METADATA_BYTES, OpCode, VERSION};
-use std::collections::HashMap;
+use std::{collections::HashMap, vec};
 use thunk::Thunk;
+
+type EnvironmentVariableFrame = HashMap<String, u8>;
 
 #[derive(Default)]
 pub struct BytecodeGen {
@@ -22,7 +24,7 @@ pub struct BytecodeGen {
     pub ins_count: u32,
     pub register_in_used: [bool; 16],
     pub ins_code: Vec<u8>,
-    context_var: HashMap<String, u8>,
+    context_var: Vec<EnvironmentVariableFrame>,
 }
 
 impl BytecodeGen {
@@ -37,7 +39,7 @@ impl BytecodeGen {
             ins_count: 0,
             register_in_used: [false; 16],
             ins_code: vec![],
-            context_var: HashMap::new(),
+            context_var: vec![],
         }
     }
 
@@ -46,8 +48,8 @@ impl BytecodeGen {
         self
     }
 
-    pub fn get_binary(&mut self, expr: Expr) -> 
-    Result<Vec<u8>, BytecodeGenerationError> 
+    pub fn get_binary(&mut self, expr: Expr) ->
+    Result<Vec<u8>, BytecodeGenerationError>
     {
         let reg = self.visit_expr(&expr, false)?;
 
@@ -120,9 +122,9 @@ impl BytecodeGen {
                 Ok(reg_value)
             }
             Expr::Var(name) => {
-                let reg_value = self.context_var.get(name);
+                let reg_value = self.get_variable_from_context(name);
                 match reg_value {
-                    Some(reg) => Ok(*reg),
+                    Some(reg) => Ok(reg),
                     None => Err(BytecodeGenerationError::NotFoundVariable {  }),
                 }
             }
@@ -230,6 +232,14 @@ impl BytecodeGen {
                     Err(BytecodeGenerationError::NotFoundFunction {  })
                 }
             }
+            Expr::LetIn { let_part, in_part } => {
+                self.new_frame_in_context();
+                for (k, v) in let_part {
+                    let value_reg = self.visit_expr(v, false)?;
+                    self.insert_variable_in_current_context(k.to_string(), value_reg);
+                };
+                Ok(0)
+            }
             expr => panic!("Error: emit_expr, not implement yet {:?}", expr),
         }
     }
@@ -288,7 +298,7 @@ impl BytecodeGen {
         }
     }
 
-    fn visit_function(&mut self) ->Result<(), BytecodeGenerationError>{
+    fn visit_function(&mut self) ->Result<(), BytecodeGenerationError> {
         let mut idx = 0;
         while idx < self.functions.len() {
             self.set_offset_func(idx, self.ins_count);
@@ -303,7 +313,7 @@ impl BytecodeGen {
                 let reg_param = self
                     .get_register()
                     .expect("Error in get register: params function");
-                self.context_var.insert(param.clone(), reg_param);
+                self.insert_variable_in_current_context(param.clone(), reg_param);
                 self.emit_ins(OpCode::LOADARG.encode(vec![reg_param as u32]));
                 reg_params.push(reg_param as usize);
             }
@@ -359,9 +369,9 @@ impl BytecodeGen {
         bytes.extend_from_slice(&(function_offset.to_be_bytes())); // function_table offset in byte
         bytes.extend_from_slice(&(self.functions.len() as u32).to_be_bytes()); // fucntion_table size
 
-        bytes.extend_from_slice(&(global_func_table_offset.to_be_bytes())); 
+        bytes.extend_from_slice(&(global_func_table_offset.to_be_bytes()));
         bytes.extend_from_slice(&(self.global_function_in_used.len() as u32).to_be_bytes());
-        
+
         bytes.extend_from_slice(&code_offset.to_be_bytes()); // code offset in byte
         bytes.extend_from_slice(&self.ins_count.to_be_bytes()); // code size
     }
@@ -506,5 +516,31 @@ impl BytecodeGen {
             }
         }
         const_len
+    }
+
+
+    fn insert_variable_in_current_context(&mut self, name: String, reg: u8) {
+        if let Some(last) = self.context_var.last_mut() {
+            last.insert(name, reg);
+        }
+    }
+
+    fn get_variable_from_context(&self, name: &String) -> Option<u8> {
+        for context_frame in self.context_var.iter().rev() {
+            match context_frame.get(name) {
+                Some(var) => return Some(*var),
+                None => continue
+            }
+        };
+
+        None
+    }
+
+    fn new_frame_in_context(&mut self) {
+        self.context_var.push(HashMap::new());
+    }
+
+    fn clear_bottom_context(&mut self) {
+        self.context_var.pop();
     }
 }

@@ -172,6 +172,7 @@ pub fn expr_with_bp(lexer: &mut Peekable<&mut Lexer>, min_pb: u8) -> Result<Expr
             Some(Ok((_, Token::EndOfFile, (_, _)))) => break,
             Some(Ok((_, Token::NewLine, (_, _)))) => break,
             Some(Ok((_, Token::RightParen, (_, _)))) => break,
+            Some(Ok((_, Token::RightBrace, (_, _)))) => break,
             Some(Ok((_, Token::Semicolon, (_, _)))) => break,
             Some(Ok((_, Token::Comma, (_, _)))) => break,
             Some(Ok((_, Token::RightBracket, (_, _)))) => break,
