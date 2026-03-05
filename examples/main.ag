@@ -1,13 +1,6 @@
-let
-   name = "Tien":
-in
 {
     port = 3030;
     routes = [
-       {
-           path = "/";
-           handler = () => html(name);
-       },
        {
            path = "/Hello";
            handler = () => html("<h1>Hello World</h1>");

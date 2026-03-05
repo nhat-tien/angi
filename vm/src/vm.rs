@@ -4,9 +4,11 @@ use crate::function::Function;
 use crate::metadata::MetaData;
 use crate::register::Register;
 use archive::Extractor;
+use shared_utils::log::{Log, LogLevel::DEBUG};
 use shared_utils::read_byte::{
     read_i64, read_str_with_len, read_u8, read_u32,
 };
+use shared_utils::read_ins;
 use crate::value::{FromValue, ToArgValue, Value};
 use instructions::{MAGIC_NUMBER, OpCode, extract_opcode};
 use std::collections::{HashMap, VecDeque};
@@ -65,6 +67,8 @@ impl VM {
             message: "Error in get bytecode".into(),
         })?;
 
+        Log::write(DEBUG, "new_from_itself");
+
         // let bytecode_size =
         //     read_u32_from_end_of_file(&file).map_err(|_| VmError::UnexpectedError {
         //         message: "error in get bytecode size".into(),
@@ -95,6 +99,8 @@ impl VM {
     where
         T: FromValue,
     {
+        Log::write(DEBUG, &format!("Try to eval {}", str_addr));
+
         let code_offset = self.metadata.code_offset;
         let mut cursor = code_offset as usize;
         let mut value: Value = Value::None;
@@ -342,6 +348,9 @@ impl VM {
                 read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
                     message: "Error in get ins value".into(),
                 })?;
+
+            read_ins::read_ins(ins);
+
             let opcode = extract_opcode(ins).ok_or_else(|| VmError::ErrorInGetOpcode {
                 message: "Error in get opcode".into(),
                 ins,

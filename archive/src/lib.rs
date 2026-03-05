@@ -132,8 +132,6 @@ impl Extractor {
             }
         })?;
 
-        println!("{}", blob_size);
-
         Ok(bytes)
     }
 

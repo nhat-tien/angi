@@ -23,7 +23,7 @@ async fn main() -> Result<(), VmError> {
 
     let avm = Arc::new(Mutex::new(vm));
 
-
+    println!("Hello ");
     println!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app(avm)).await.unwrap();
 

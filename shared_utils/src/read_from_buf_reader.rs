@@ -21,7 +21,7 @@ pub fn read_u8(r: &mut BufReader<File>) -> (String, u8){
     (u8_slice_to_binary_string(&buf), num)
 }
 
-fn u8_slice_to_binary_string(bytes: &[u8]) -> String {
+pub fn u8_slice_to_binary_string(bytes: &[u8]) -> String {
     let mut binary_strings = Vec::new();
     for byte in bytes {
         binary_strings.push(format!("{:08b}", byte));

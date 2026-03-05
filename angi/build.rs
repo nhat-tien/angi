@@ -5,6 +5,8 @@ fn main() {
     println!("cargo:rerun-if-changed=../server/Cargo.toml");
     println!("cargo:rerun-if-changed=../vm/src");
     println!("cargo:rerun-if-changed=../vm/Cargo.toml");
+    println!("cargo:rerun-if-changed=../archive/src");
+    println!("cargo:rerun-if-changed=../archive/Cargo.toml");
 
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let workspace = manifest_dir.parent().unwrap();
