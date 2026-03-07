@@ -42,6 +42,7 @@ fn build_router(vm: Avm) -> Result<Router, VmError> {
 
     Ok(list_routes_iter.fold(Router::new(), |router, route| {
         let path = route.get::<String>("path").unwrap();
+        println!("{}", path);
         let function = route.get::<Function>("handler").unwrap();
         let result: Table = function.call(&mut ready_vm, ()).unwrap();
 

@@ -2,8 +2,8 @@
     port = 3030;
     routes = [
        {
-           path = "/Hello";
-           handler = () => html("<h1>Hello World</h1>");
+           path = "/";
+           handler = () => html("<h1>Hello</h1>");
        }
     ];
-};
+}

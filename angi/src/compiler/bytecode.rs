@@ -140,7 +140,7 @@ impl BytecodeGen {
                     ]));
                     Ok(reg_value)
                 } else {
-                    Ok(self.visit_table(expr.clone())?)
+                    self.visit_table(expr.clone())
                 }
             }
             Expr::List { .. } => {
@@ -155,7 +155,7 @@ impl BytecodeGen {
                     ]));
                     Ok(reg_value)
                 } else {
-                    Ok(self.visit_list(expr.clone())?)
+                    self.visit_list(expr.clone())
                 }
             }
             Expr::FunctionDeclare { body, params } => {
@@ -298,16 +298,18 @@ impl BytecodeGen {
         }
     }
 
-    fn visit_function(&mut self) ->Result<(), BytecodeGenerationError> {
+    fn visit_function(&mut self) -> Result<(), BytecodeGenerationError> {
         let mut idx = 0;
         while idx < self.functions.len() {
             self.set_offset_func(idx, self.ins_count);
             let function = self.functions[idx].clone();
             let mut reg_params: Vec<usize> = vec![];
 
-            if !self.context_var.is_empty() {
-                panic!("Context var not empty");
-            }
+            self.new_frame_in_context();
+
+            // if !self.context_var.is_empty() {
+            //     panic!("Context var not empty");
+            // }
 
             for param in function.params {
                 let reg_param = self
@@ -323,7 +325,8 @@ impl BytecodeGen {
             self.free_registers(reg_params);
             self.emit_ins(OpCode::RETURN.encode(vec![reg_value as u32]));
             self.free_register(reg_value as usize);
-            self.context_var.clear();
+            // self.context_var.clear();
+            self.clear_bottom_context();
 
             idx += 1;
         }

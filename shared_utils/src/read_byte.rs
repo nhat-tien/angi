@@ -1,4 +1,4 @@
-use std::{fs::File, io::{self, Read, Seek}};
+use std::{fs::File, io::{self, Read, Seek}, str};
 
 pub fn read_i64(bytes: &[u8], cursor: &mut usize) -> Option<i64> {
     if let Some(slice) = bytes
@@ -51,15 +51,18 @@ pub fn read_n_bytes_from_cursor(bytes: &[u8], cursor: usize, n: usize) -> Option
     }
 }
 
-
 pub fn read_str_with_len(bytes: &[u8], cursor: &mut usize, str_len: usize) -> Option<String>{
-    let mut string = String::from("");
-    for _ in  0..str_len {
-        let char_u8 = read_u8(bytes, cursor)?;
-        string.push(char_u8 as char);
-    }
+    let slice = &bytes[*cursor..*cursor + str_len];
+    let str = read_str_from_bytes(slice);
+    *cursor += str_len;
+    str
+}
 
-    Some(string)
+pub fn read_str_from_bytes(bytes: &[u8]) -> Option<String>{
+    match str::from_utf8(bytes) {
+        Ok(s) => Some(s.to_string()),
+        Err(_) => None
+    }
 }
 
 pub fn read_u32_from_end_of_file(mut f: &File) -> std::io::Result<u32> {
