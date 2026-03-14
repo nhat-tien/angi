@@ -1,4 +1,4 @@
-let 
+let
   html      = import("lib.html");
   db        = import("lib.db");
   validator = import("lib.validator");
@@ -16,14 +16,14 @@ in
        },
        {
            path = "/id:int";
-           handler = ({ data }) => 
+           handler = ({ data }) =>
               data
               |> validator(data)
-              |> then(data => 
+              |> then(data =>
                     db.table("denkjn").insert(data)
-                 ) 
+                 )
               |> map(data => successMessage())
-              |> orElse(e => error()) 
+              |> orElse(e => error())
       }
     ];
 };

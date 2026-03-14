@@ -8,6 +8,7 @@ use vm::value::{Function, List, Table};
 use vm::vm::VM;
 
 use crate::compiler::bytecode::load_global;
+use crate::compiler::compile_with_handle_error;
 use crate::compiler::{bytecode::BytecodeGen, lexer::Lexer, parser::parse};
 use crate::compiler::optimization::optimization;
 const PADDING: usize = 16;
@@ -81,29 +82,15 @@ pub fn index(args: &[String]) {
                 Err(err) => panic!("Cannot open file {err:?}"),
             };
 
-            let mut lexer = Lexer::new(content.chars());
+            let rs = compile_with_handle_error(content);
 
-            let mut ast = match parse(&mut lexer) {
-                Ok(ast) => ast,
-                Err(err) => panic!("Err in parse {err:?}"),
-            };
+            if let Ok(bytecode) = rs {
+                let mut file = File::create(dist_file_path).unwrap_or_else(|err| {
+                    panic!("Cannot create file {err:?}");
+                 });
 
-            let global_func = load_global();
-
-            let mut bytecode_genaration = BytecodeGen::new()
-                  .with_global_func(global_func);
-
-            optimization(&mut ast);
-
-            let content = bytecode_genaration.get_binary(ast).unwrap_or_else(|err| {
-                panic!("{err:?}");
-            });
-
-            let mut file = File::create(dist_file_path).unwrap_or_else(|err| {
-                panic!("Cannot create file {err:?}");
-             });
-
-            let _ = file.write_all(&content);
+                let _ = file.write_all(&bytecode);
+            }
         }
         "readbc" => {
             let source_file_path = &args[3];

@@ -6,14 +6,8 @@ use std::fs::{self, File, set_permissions};
 use std::io::{self, Write};
 use std::path::Path;
 use archive::Archiver;
-use crate::compiler::bytecode::load_global;
+use crate::compiler::compile_with_handle_error;
 use crate::compiler::error::CompilationError;
-use crate::compiler::{
-    bytecode::BytecodeGen,
-    lexer::Lexer,
-    optimization::optimization,
-    parser::parse,
-};
 
 pub fn index(args: &[String]) -> Result<(), CompilationError>{
     let source_file_path = &args[2];
@@ -25,21 +19,7 @@ pub fn index(args: &[String]) -> Result<(), CompilationError>{
         }
     )?;
 
-    let mut lexer = Lexer::new(source.chars());
-
-    let mut ast = parse(&mut lexer).map_err(|err| {
-        CompilationError::ParseError(err)
-    })?;
-
-    optimization(&mut ast);
-
-    let global_func = load_global();
-
-    let bytecode = BytecodeGen::new()
-        .with_global_func(global_func)
-        .get_binary(ast).map_err(|err| {
-        CompilationError::BytecodeGenerationError(err)
-    })?;
+    let bytecode = compile_with_handle_error(source)?;
 
     let mut file = File::options()
         .create(true)

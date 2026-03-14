@@ -35,21 +35,40 @@ pub fn expr_table(lexer: &mut Peekable<&mut Lexer>) -> Result<Expr, ParseError> 
             _ => panic!("Unexpect Parser Err"),
         };
 
-        if !matches!(lexer.next(), Some(Ok((_, Token::Equal, (_, _))))) {
-            return Err(ParseError {
-                error: String::from("Expect equal"),
-                location: (0, 0),
-            });
+        if let Some(Ok((l, tok, (_, _)))) = lexer.next() {
+            if !matches!(tok, Token::Equal) {
+                return Err(ParseError {
+                    error: String::from("Expect equal"),
+                    location: (l, 0),
+                });
+            }
         }
+
+        // if !matches!(lexer.next(), Some(Ok((_, Token::Equal, (_, _))))) {
+        //     return Err(ParseError {
+        //         error: String::from("Expect equal"),
+        //         location: (0, 0),
+        //     });
+        // }
 
         let rhs = expr_with_bp(lexer, 0)?;
 
-        if !matches!(lexer.next(), Some(Ok((_, Token::Semicolon, (_, _))))) {
-            return Err(ParseError {
-                error: String::from("Expect semicolon"),
-                location: (0, 0),
-            });
+        if let Some(Ok((l, tok, (_, _)))) = lexer.next() {
+            if !matches!(tok, Token::Semicolon) {
+                return Err(ParseError {
+                    error: String::from("Expect semicolon"),
+                    location: (l, 0),
+                });
+            }
         }
+
+
+        // if !matches!(lexer.next(), Some(Ok((0, Token::Semicolon, (_, _))))) {
+        //     return Err(ParseError {
+        //         error: String::from("Expect semicolon"),
+        //         location: (0, 0),
+        //     });
+        // }
 
         attr_set.insert(name, rhs);
     }

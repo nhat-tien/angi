@@ -8,3 +8,4 @@ vm = { path = "../vm" }
 instructions = { path = "../instructions" }
 archive = { path = "../archive" }
 shared_utils = { path = "../shared_utils" }
+ariadne = { version = "0.6.0", features = ["auto-color"] }
