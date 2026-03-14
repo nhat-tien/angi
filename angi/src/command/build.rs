@@ -19,7 +19,7 @@ pub fn index(args: &[String]) -> Result<(), CompilationError>{
         }
     )?;
 
-    let bytecode = compile_with_handle_error(source)?;
+    let bytecode = compile_with_handle_error(&source, source_file_path)?;
 
     let mut file = File::options()
         .create(true)

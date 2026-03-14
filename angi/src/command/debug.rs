@@ -82,7 +82,7 @@ pub fn index(args: &[String]) {
                 Err(err) => panic!("Cannot open file {err:?}"),
             };
 
-            let rs = compile_with_handle_error(content);
+            let rs = compile_with_handle_error(&content, source_file_path);
 
             if let Ok(bytecode) = rs {
                 let mut file = File::create(dist_file_path).unwrap_or_else(|err| {

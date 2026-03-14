@@ -12,14 +12,13 @@ pub mod token;
 pub mod bytecode;
 pub mod handle_error;
 
-pub fn compile_with_handle_error(src: String) -> Result<Vec<u8>, CompilationError> {
-    handle_error::handle_error(compile(src))
+pub fn compile_with_handle_error(src: &str, filename: &str) -> Result<Vec<u8>, CompilationError> {
+    handle_error::handle_error(compile(src), src, filename)
 }
 
-pub fn compile(src: String) -> Result<Vec<u8>, CompilationError> {
+pub fn compile(src: &str) -> Result<Vec<u8>, CompilationError> {
 
     let mut lexer = Lexer::new(src.chars());
-
     let mut ast = parse(&mut lexer).map_err(|err| { CompilationError::ParseError(err) })?;
 
     let global_func = load_global();
