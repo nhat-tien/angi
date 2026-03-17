@@ -11,8 +11,8 @@ pub struct ParseError {
 #[allow(dead_code)]
 #[derive(Debug,PartialEq)]
 pub struct LexicalError {
-    error: String,
-    location: (i32, i32),
+    pub error: String,
+    pub location: (u32, u32),
 }
 
 
@@ -23,7 +23,8 @@ pub enum CompilationError {
     },
     ParseError(ParseError),
     BytecodeGenerationError(BytecodeGenerationError),
-    ArchiveError
+    ArchiveError,
+    UnexpectedError
 }
 
 #[derive(Debug)]

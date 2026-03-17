@@ -18,7 +18,7 @@ fn compiler_test_get_value_from_table() {
        }
     ];
 }
-    "#).unwrap();
+    "#, "test.ag").unwrap();
 
     let mut vm = VM::new_from_bytes(bytecode).unwrap();
 
@@ -58,7 +58,7 @@ fn compiler_test_use_global_function() {
        }
     ];
 };
-    "#).unwrap();
+    "#, "test.ag").unwrap();
 
     let mut vm = VM::new_from_bytes(bytecode).unwrap();
 

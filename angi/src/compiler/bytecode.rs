@@ -232,14 +232,15 @@ impl BytecodeGen {
                     Err(BytecodeGenerationError::NotFoundFunction {  })
                 }
             }
-            // Expr::LetIn { let_part, in_part } => {
-            //     self.new_frame_in_context();
-            //     for (k, v) in let_part {
-            //         let value_reg = self.visit_expr(v, false)?;
-            //         self.insert_variable_in_current_context(k.to_string(), value_reg);
-            //     };
-            //     Ok(0)
-            // }
+            Expr::LetIn { let_part, in_part } => {
+                self.new_frame_in_context();
+                for (k, v) in let_part {
+                    let value_reg = &self.visit_expr(v, false)?;
+                    self.insert_variable_in_current_context(k.to_string(), *value_reg);
+                };
+                let reg_in_part = &self.visit_expr(in_part, false)?;
+                Ok(*reg_in_part)
+            }
             expr => panic!("Error: emit_expr, not implement yet {:?}", expr),
         }
     }

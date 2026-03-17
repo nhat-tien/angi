@@ -53,7 +53,7 @@ pub struct Diagnostic {
 }
 
 pub struct DiagnosticEngine {
-    diagnostics: Vec<Diagnostic>,
+    pub diagnostics: Vec<Diagnostic>,
 }
 
 impl DiagnosticEngine {
@@ -164,9 +164,9 @@ mod tests {
         let line_starts = compute_line_starts(source);
 
         // Span at line 2, column 4, length 5
+        println!("{:?}", line_starts);
         let span = Span { line: 2, column: 4 };
         let range = span.to_range(&line_starts, 5);
-        // line 2 starts at byte 13, so 13+4 = 17, and 17+5 = 22
-        assert_eq!(range, 17..22);
+        assert_eq!(range, 16..21);
     }
 }

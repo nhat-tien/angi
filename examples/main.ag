@@ -1,5 +1,8 @@
+let
+   a = 3030;
+in
 {
-    port = 3030
+    port = a;
     routes = [
        {
            path = "/";

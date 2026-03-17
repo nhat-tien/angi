@@ -6,7 +6,7 @@ use std::fs::{self, File, set_permissions};
 use std::io::{self, Write};
 use std::path::Path;
 use archive::Archiver;
-use crate::compiler::compile_with_handle_error;
+use crate::compiler::compile_and_type_checking;
 use crate::compiler::error::CompilationError;
 
 pub fn index(args: &[String]) -> Result<(), CompilationError>{
@@ -19,7 +19,7 @@ pub fn index(args: &[String]) -> Result<(), CompilationError>{
         }
     )?;
 
-    let bytecode = compile_with_handle_error(&source, source_file_path)?;
+    let bytecode = compile_and_type_checking(&source, source_file_path)?;
 
     let mut file = File::options()
         .create(true)

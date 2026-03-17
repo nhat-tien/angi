@@ -8,7 +8,7 @@ use vm::value::{Function, List, Table};
 use vm::vm::VM;
 
 use crate::compiler::bytecode::load_global;
-use crate::compiler::compile_with_handle_error;
+use crate::compiler::compile_and_type_checking;
 use crate::compiler::{bytecode::BytecodeGen, lexer::Lexer, parser::parse};
 use crate::compiler::optimization::optimization;
 const PADDING: usize = 16;
@@ -82,7 +82,7 @@ pub fn index(args: &[String]) {
                 Err(err) => panic!("Cannot open file {err:?}"),
             };
 
-            let rs = compile_with_handle_error(&content, source_file_path);
+            let rs = compile_and_type_checking(&content, source_file_path);
 
             if let Ok(bytecode) = rs {
                 let mut file = File::create(dist_file_path).unwrap_or_else(|err| {
