@@ -1,7 +1,12 @@
+
+
+table Request { body: number }
+
+enum Result { }
+
+
 let
-  html      = import("lib.html");
-  db        = import("lib.db");
-  validator = import("lib.validator");
+  html = import("lib.html");
 in
 {
     port = 3030;
@@ -27,3 +32,4 @@ in
       }
     ];
 };
+

@@ -1,0 +1,8 @@
+[package]
+name = "angi-archive"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+angi-ins = { path = "../angi-ins" }
+angi-utils = { path = "../angi-utils" }

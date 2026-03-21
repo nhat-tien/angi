@@ -1,0 +1,11 @@
+[package]
+name = "angi"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+angi-runtime = { path = "../angi-runtime" }
+angi-ins = { path = "../angi-ins" }
+angi-archive = { path = "../angi-archive" }
+angi-utils = { path = "../angi-utils" }
+ariadne = { version = "0.6.0", features = ["auto-color"] }

@@ -1,0 +1,11 @@
+[package]
+name = "angi-runtime"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+
+angi-ins = { path = "../angi-ins" }
+angi-archive = { path = "../angi-archive" }
+angi-utils = { path = "../angi-utils" }
+
