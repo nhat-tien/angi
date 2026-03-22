@@ -1,6 +1,6 @@
 use std::fmt;
 
-use angi__archive::ExtractorError;
+use angi_archive::ExtractorError;
 
 #[derive(Debug)]
 pub enum VmError {

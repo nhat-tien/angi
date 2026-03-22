@@ -6,8 +6,8 @@ use axum::{
     routing::get,
     Json,
 };
-use vm::value::{Function, List, Table};
-use vm::{error::VmError, vm::VM};
+use angi_runtime::value::{Function, List, Table};
+use angi_runtime::{error::VmError, vm::VM};
 
 type Avm = Arc<Mutex<VM>>;
 

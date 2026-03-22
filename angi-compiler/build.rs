@@ -1,12 +1,12 @@
 use std::{env, fs, path::PathBuf, process::Command};
 
 fn main() {
-    println!("cargo:rerun-if-changed=../server/src");
-    println!("cargo:rerun-if-changed=../server/Cargo.toml");
-    println!("cargo:rerun-if-changed=../vm/src");
-    println!("cargo:rerun-if-changed=../vm/Cargo.toml");
-    println!("cargo:rerun-if-changed=../archive/src");
-    println!("cargo:rerun-if-changed=../archive/Cargo.toml");
+    println!("cargo:rerun-if-changed=../angi-server/src");
+    println!("cargo:rerun-if-changed=../angi-server/Cargo.toml");
+    println!("cargo:rerun-if-changed=../angi-runtime/src");
+    println!("cargo:rerun-if-changed=../angi-runtime/Cargo.toml");
+    println!("cargo:rerun-if-changed=../angi-archive/src");
+    println!("cargo:rerun-if-changed=../angi-archive/Cargo.toml");
 
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let workspace = manifest_dir.parent().unwrap();
@@ -19,7 +19,7 @@ fn main() {
     let mut cmd = Command::new("cargo");
     cmd.arg("build")
         .arg("-p")
-        .arg("server")
+        .arg("angi-server")
         .arg("--target-dir")
         .arg(&target_dir);
 
