@@ -71,7 +71,7 @@ fn app(vm: Avm, static_store: ArcStore) -> Result<Router, VmError> {
 
     let static_config = ready_vm.eval::<Table>("static").unwrap();
 
-    let prefix = static_config.get::<String>("prefix").unwrap();
+    // let prefix = static_config.get::<String>("prefix").unwrap();
 
     let dir = static_config.get::<String>("dir").unwrap();
 
@@ -80,8 +80,9 @@ fn app(vm: Avm, static_store: ArcStore) -> Result<Router, VmError> {
     Ok(build_router(vm.clone())
         .expect("Error in build router")
         // Static
-        .route("/static/{*path}", static_handler(static_store))
-        .nest_service(&prefix, ServeDir::new(dir))
+        // .route("/static/{*path}", static_handler(static_store))
+        // .nest_service(&prefix, ServeDir::new(dir))
+        .fallback_service(ServeDir::new(dir))
         .layer(middleware::from_fn(logger::request_logger))
     )
 }
