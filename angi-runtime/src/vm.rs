@@ -48,6 +48,22 @@ impl VM {
         Ok(vm)
     }
 
+
+    pub fn new_from_extractor(extractor: &Extractor) -> Result<Self, VmError> {
+
+        let mut vm = VM::default();
+
+        let bytecode = extractor.extract_blob("bytecode".into()).ok_or_else(|| VmError::UnexpectedError {
+            message: "Error in get bytecode".into(),
+        })?;
+
+        Log::write(DEBUG, "new_from_extractor");
+
+        vm.load(bytecode)?;
+
+        Ok(vm)
+    }
+
     pub fn new_from_itself() -> Result<Self, VmError> {
         let mut vm = VM::default();
 

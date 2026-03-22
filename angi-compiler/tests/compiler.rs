@@ -1,5 +1,5 @@
 use angi::compiler::compile;
-use vm::{value::{Function, List, Table}, vm::VM};
+use angi_runtime::{value::{Function, List, Table}, vm::VM};
 
 
 #[test]

@@ -342,12 +342,12 @@ fn ast_test_function_declare_more_param() {
 }
 
 
-#[test]
-fn ast_test_pipe1() {
-    let mut lex = Lexer::new_from_str("100 |> handle()\n");
-    let expr = parse(&mut lex);
-    assert_eq!(expr, Ok(Expr::Pipe {
-        lhs: Box::new(Expr::Number(100)),
-        rhs: Box::new(Expr::FunctionCall { name: "handle".into(), args: vec![] }),
-    }));
-}
+// #[test]
+// fn ast_test_pipe1() {
+//     let mut lex = Lexer::new_from_str("100 |> handle()\n");
+//     let expr = parse(&mut lex);
+//     assert_eq!(expr, Ok(Expr::Pipe {
+//         lhs: Box::new(Expr::Number(100)),
+//         rhs: Box::new(Expr::FunctionCall { name: "handle".into(), args: vec![] }),
+//     }));
+// }

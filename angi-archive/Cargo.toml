@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 angi-ins = { path = "../angi-ins" }
 angi-utils = { path = "../angi-utils" }
+walkdir = "2"

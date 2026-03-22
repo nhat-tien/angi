@@ -7,8 +7,12 @@ edition = "2024"
 axum = { version = "0.8" }
 tokio = { version = "1.0", features = ["full"] }
 angi-runtime = { path = "../angi-runtime" }
+angi-archive = { path = "../angi-archive" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+colored = "2"
+mime_guess = "2"
+tower-http = { version = "0.5", features = ["fs"] }
 
 [[bin]]
 name = "server"
