@@ -1,8 +1,19 @@
 
 
-table Request { body: number }
 
-enum Result { }
+table Request {
+    body: number
+}
+
+enum Result<T, E> {
+    Ok(T),
+    Err(E)
+}
+
+fn getLastThing(str: string) =>
+  str |> split(".")
+      |> getLast()
+
 
 
 let

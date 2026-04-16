@@ -6,11 +6,22 @@ pub fn optimization(ast: &mut Expr) {
             for field in fields.values_mut() {
                 optimization(field);
             }
-        },
-        Expr::Binary { .. } => {
-            *ast = Expr::Number(calculate_expr(ast));
-        },
-        _ => ()
+        }
+        Expr::Binary { lhs, rhs, op } => {
+            optimization(lhs);
+            optimization(rhs);
+
+            match (&**lhs, op, &**rhs) {
+                (Expr::LiteralString(a), Operator::ConcatString, Expr::LiteralString(b)) => {
+                    *ast = Expr::LiteralString(format!("{a}{b}"));
+                }
+                (Expr::Number(_), _, Expr::Number(_)) => {
+                    *ast = Expr::Number(calculate_expr(ast));
+                }
+                _ => {}
+            }
+        }
+        _ => (),
     }
 }
 
@@ -20,22 +31,22 @@ fn calculate_expr(ast: &Expr) -> i32 {
         Expr::Unary { op, rhs } => {
             let rhs_num = calculate_expr(rhs);
             match op {
-                Operator::Add => { rhs_num },
-                Operator::Sub => { - rhs_num },
-                _ => rhs_num
+                Operator::Add => rhs_num,
+                Operator::Sub => -rhs_num,
+                _ => rhs_num,
             }
         }
         Expr::Binary { op, lhs, rhs } => {
-                let lhs_num = calculate_expr(lhs);
-                let rhs_num = calculate_expr(rhs);
-                match op {
-                    Operator::Add => { lhs_num + rhs_num },
-                    Operator::Sub => { lhs_num - rhs_num },
-                    Operator::Mul => { lhs_num * rhs_num },
-                    Operator::Div => { lhs_num / rhs_num },
-                }
-        },
-        _ => 0
+            let lhs_num = calculate_expr(lhs);
+            let rhs_num = calculate_expr(rhs);
+            match op {
+                Operator::Add => lhs_num + rhs_num,
+                Operator::Sub => lhs_num - rhs_num,
+                Operator::Mul => lhs_num * rhs_num,
+                Operator::Div => lhs_num / rhs_num,
+                Operator::ConcatString => 0,
+            }
+        }
+        _ => 0,
     }
 }
-

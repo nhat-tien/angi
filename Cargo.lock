@@ -42,6 +42,14 @@ name = "angi-ins"
 version = "0.1.0"
 
 [[package]]
+name = "angi-repl"
+version = "0.1.0"
+dependencies = [
+ "angi",
+ "angi-runtime",
+]
+
+[[package]]
 name = "angi-runtime"
 version = "0.1.0"
 dependencies = [

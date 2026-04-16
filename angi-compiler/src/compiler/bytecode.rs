@@ -84,7 +84,8 @@ impl BytecodeGen {
                 ]));
                 Ok(reg_value)
             }
-            Expr::LiteralString(str) => {
+            Expr::LiteralString(str)
+            | Expr::LiteralStringMultiline(str) => {
                 let idx_const = self.make_const(Constant::String(str.to_string()));
                 let reg_value = self
                     .get_register()
@@ -109,6 +110,7 @@ impl BytecodeGen {
                     Operator::Sub => OpCode::SUB,
                     Operator::Div => OpCode::DIV,
                     Operator::Mul => OpCode::MUL,
+                    Operator::ConcatString => OpCode::CONCAT,
                 };
 
                 self.emit_ins(opcode.encode(vec![

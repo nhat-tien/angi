@@ -6,7 +6,7 @@ use std::fs::{self, File, set_permissions};
 use std::io::{self, Write};
 use std::path::Path;
 use angi_archive::Archiver;
-use crate::compiler::{compile, compile_and_type_checking};
+use crate::compiler::compile;
 use crate::compiler::error::CompilationError;
 
 pub fn index(args: &[String]) -> Result<(), CompilationError>{

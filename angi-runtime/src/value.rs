@@ -40,12 +40,12 @@ impl Clone for Value {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Value::Int(_) => write!(f, "Int"),
-            Value::String(_) => write!(f, "String"),
-            Value::Table(_) => write!(f, "Table"),
-            Value::List(_) => write!(f, "List"),
-            Value::Thunk(_) => write!(f, "Thunk"),
-            Value::Function(_) => write!(f, "Function"),
+            Value::Int(int) => write!(f, "Int({int})"),
+            Value::String(string) => write!(f, "String({string})"),
+            Value::Table(table) => write!(f, "Table: {:?}", table),
+            Value::List(list) => write!(f, "List: {:?}", list),
+            Value::Thunk(thunk) => write!(f, "Thunk ({:?})", thunk),
+            Value::Function(func) => write!(f, "Function({:?})", func),
             Value::None => write!(f, "None"),
         }
     }

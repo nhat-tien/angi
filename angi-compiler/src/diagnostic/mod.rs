@@ -9,7 +9,7 @@ pub enum Severity {
 }
 
 impl Severity {
-    fn get_report_kind(&self) -> ReportKind {
+    fn get_report_kind(&self) -> ReportKind<'_> {
         match self {
             Severity::Error => ReportKind::Error,
             Severity::Warning => ReportKind::Warning,

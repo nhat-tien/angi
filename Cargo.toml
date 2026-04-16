@@ -7,7 +7,7 @@ members = [
   "angi-server",
   "angi-utils",
   "angi-archive",
-  "angi-runtime"
-]
+  "angi-runtime",
+  "angi-repl"]
 
 default-members = [ "angi-compiler" ]

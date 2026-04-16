@@ -12,6 +12,8 @@ pub enum Token {
     RightArrow,      // ->
     EqualRightArrow, // =>
     Bar,             // |
+    Dot,             // .
+    DoubleDot,       // ..
 
     // Operator
     Plus,            // +
@@ -24,6 +26,7 @@ pub enum Token {
 
     Name(String),
     String(String),
+    MultilineString(String),
     Number(i32),
 
     // Preserve keyword
@@ -54,5 +57,12 @@ impl Token {
 
     pub fn is_prefix_token(&self) -> bool {
         matches!(self, Token::Plus | Token::Dash)
+    }
+
+    pub fn to_str_symbol(&self) -> &str {
+        match self {
+            Token::Semicolon => ";",
+            _ => todo!()
+        }
     }
 }

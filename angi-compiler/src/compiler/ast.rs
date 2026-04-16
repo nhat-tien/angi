@@ -17,6 +17,7 @@ pub enum Expr {
     },
     Number(i32),
     LiteralString(String),
+    LiteralStringMultiline(String),
     Boolean(bool),
     Table {
         fields: HashMap<Indentifier, Expr>
@@ -45,6 +46,7 @@ pub enum Operator {
     Sub,
     Div,
     Mul,
+    ConcatString
 }
 
 type Indentifier = String;

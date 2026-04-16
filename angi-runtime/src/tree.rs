@@ -1,6 +1,6 @@
-use std::{collections::HashMap, fmt::Debug};
+use std::{collections::HashMap, fmt::{self, Debug}};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Tree<T> {
     Leaf(Option<T>),
     Branchs(HashMap<String, Tree<T>>),
@@ -75,6 +75,97 @@ where
         };
 
         Ok(())
+    }
+
+    pub fn to_json(&self) -> String {
+        self.traverse(0)
+    }
+
+    fn traverse(&self, indent: usize) -> String {
+        let indent_str = "  ".repeat(indent);
+        let next_indent_str = "  ".repeat(indent + 1);
+
+        match self {
+            Tree::Leaf(Some(value)) => format!("{:?}", value),
+            Tree::Leaf(None) => "null".to_string(),
+
+            Tree::Branchs(map) => {
+                if map.is_empty() {
+                    return "{}".to_string();
+                }
+                let mut parts = Vec::new();
+
+                let mut keys: Vec<_> = map.keys().collect();
+                keys.sort();
+
+                for key in keys {
+                    let value = &map[key];
+                    let v = value.traverse(indent + 1);
+
+                    parts.push(format!(
+                        "{}\"{}\": {}",
+                        next_indent_str, key, v
+                    ));
+                }
+
+                format!(
+                    "{{\n{}\n{}}}",
+                    parts.join(",\n"),
+                    indent_str
+                )
+            }
+        }
+    }
+}
+
+impl<T> fmt::Debug for Tree<T>
+where
+    T: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.fmt_pretty(f, 0)
+    }
+}
+
+
+impl<T> Tree<T>
+where
+    T: fmt::Debug,
+{
+    fn fmt_pretty(&self, f: &mut fmt::Formatter<'_>, indent: usize) -> fmt::Result {
+        let indent_str = "  ".repeat(indent);
+        let next_indent_str = "  ".repeat(indent + 1);
+
+        match self {
+            Tree::Leaf(Some(value)) => write!(f, "{:?}", value),
+            Tree::Leaf(None) => write!(f, "null"),
+
+            Tree::Branchs(map) => {
+                if map.is_empty() {
+                    return write!(f, "{{}}");
+                }
+
+                writeln!(f, "{{")?;
+
+                let mut keys: Vec<_> = map.keys().collect();
+                keys.sort();
+
+                for (i, key) in keys.iter().enumerate() {
+                    let value = &map[*key];
+
+                    write!(f, "{}\"{}\": ", next_indent_str, key)?;
+                    value.fmt_pretty(f, indent + 1)?;
+
+                    if i != keys.len() - 1 {
+                        writeln!(f, ",")?;
+                    } else {
+                        writeln!(f)?;
+                    }
+                }
+
+                write!(f, "{}}}", indent_str)
+            }
+        }
     }
 }
 

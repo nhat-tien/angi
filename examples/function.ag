@@ -1,0 +1,19 @@
+type Maybe e  = Some e | None;
+
+type Result v e  = Ok v | Err e;
+
+
+fn getHocSinhByAge(age: number): Maybe HocSinh =>
+  match age {
+     0 => 1,
+     n =>
+  }
+;
+
+fn checkSize(size: number): string =>
+   check {
+     size > 1 => "Large",
+     _ =>
+   }
+;
+

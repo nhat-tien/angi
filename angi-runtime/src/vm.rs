@@ -111,6 +111,41 @@ impl VM {
         Ok(())
     }
 
+    pub fn eval_value(&mut self, str_addr: &str) -> Result<Value, VmError>
+    {
+        Log::write(DEBUG, &format!("Try to eval {}", str_addr));
+
+        let code_offset = self.metadata.code_offset;
+        let mut cursor = code_offset as usize;
+        let mut value: Value = Value::None;
+
+        for key in str_addr.split('.') {
+            value = self.handle_instruction(cursor)?;
+            if let Value::Table(table) = &value {
+                match table.get(vec![key]) {
+                    Some(Value::Thunk(thunk_idx)) => {
+                        if let Some(thunk_offset) = self.thunk_table.get(&(thunk_idx as usize)) {
+                            cursor = (*thunk_offset + code_offset) as usize;
+                        }
+                        value = Value::Thunk(thunk_idx);
+                    }
+                    Some(n) => value = n,
+                    None => {
+                        return Err(VmError::UnexpectedError {
+                            message: format!("property not found: {}", key),
+                        });
+                    }
+                }
+            };
+        }
+
+        if let Value::Thunk(thunk_idx) = value {
+            value = self.eval_thunk(thunk_idx)?;
+        };
+
+        Ok(value)
+    }
+
     pub fn eval<T>(&mut self, str_addr: &str) -> Result<T, VmError>
     where
         T: FromValue,

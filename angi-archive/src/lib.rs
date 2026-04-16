@@ -93,6 +93,7 @@ impl Archiver {
         manifest_byte
     }
 
+    #[allow(unused)]
     fn archive_dir(&mut self, dir: &str) {
         let base = Path::new(dir);
 

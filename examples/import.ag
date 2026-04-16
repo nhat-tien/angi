@@ -1,0 +1,13 @@
+import function
+
+
+{
+    value = import("function");
+    value1 = getSomthing();
+}
+
+//
+
+{
+
+}

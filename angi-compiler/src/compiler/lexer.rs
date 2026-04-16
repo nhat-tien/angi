@@ -15,6 +15,7 @@ pub struct Lexer<'a>
     pending: Vec<Spanned>,
     chr0: Option<char>,
     chr1: Option<char>,
+    chr2: Option<char>,
     current_pos: u32,
     current_loc: u32,
 }
@@ -27,10 +28,12 @@ impl<'a> Lexer<'a>
             pending: Vec::new(),
             chr0: None,
             chr1: None,
+            chr2: None,
             current_loc: 1,
             current_pos: 0,
         };
 
+        lx.move_next_char();
         lx.move_next_char();
         lx.move_next_char();
         lx.current_pos = 1;
@@ -44,10 +47,12 @@ impl<'a> Lexer<'a>
             pending: Vec::new(),
             chr0: None,
             chr1: None,
+            chr2: None,
             current_loc: 1,
             current_pos: 0,
         };
 
+        lx.move_next_char();
         lx.move_next_char();
         lx.move_next_char();
         lx.current_pos = 1;
@@ -107,7 +112,8 @@ impl<'a> Lexer<'a>
         self.current_pos += 1;
         let next_char = self.chars.next();
         self.chr0 = self.chr1;
-        self.chr1 = next_char;
+        self.chr1 = self.chr2;
+        self.chr2 = next_char;
     }
 
     fn get_pos(&self) -> u32 {
@@ -134,6 +140,15 @@ impl<'a> Lexer<'a>
     }
 
     fn is_string_continuation(&self) -> bool {
+        match self.chr1 {
+            Some('"') => self.is_escaped(),
+            Some('\n') => false,
+            Some(_) => true,
+            None => false
+        }
+    }
+
+    fn is_multiline_string_continuation(&self) -> bool {
         match self.chr1 {
             Some('"') => self.is_escaped(),
             Some(_) => true,
@@ -191,6 +206,30 @@ impl<'a> Lexer<'a>
         Ok((line, Token::String(string), (start_pos, end_pos)))
     }
 
+    fn lex_multiline_string(&mut self) -> LexResult {
+        let mut string = String::new();
+        let line = self.get_line();
+        let start_pos = self.get_pos();
+
+        self.move_next_char();
+        self.move_next_char();
+
+        loop {
+            if !self.is_multiline_string_continuation() {
+                break;
+            }
+            self.move_next_char();
+            string.push(self.chr0.expect("lex_string"));
+        }
+
+        self.move_next_char(); // Get end position of the last "
+        self.move_next_char();
+        self.move_next_char();
+        let end_pos = self.get_pos();
+
+        Ok((line, Token::MultilineString(string), (start_pos, end_pos)))
+    }
+
     fn lex_number(&mut self) -> LexResult {
         let mut string = String::new();
         let line = self.get_line();
@@ -246,9 +285,22 @@ impl<'a> Lexer<'a>
             ',' => {
                 self.emit_one_character(Token::Comma);
             }
+            '.' => {
+                if matches!(self.chr1, Some('.')) {
+                    self.emit_one_character(Token::DoubleDot);
+                    self.move_next_char();
+                } else {
+                    self.emit_one_character(Token::Dot);
+                }
+            }
             '"' => {
-                    let string = self.lex_string()?;
-                    self.emit(string);
+                if self.chr1 == Some('"') && self.chr2 == Some('"') {
+                        let string = self.lex_multiline_string()?;
+                        self.emit(string);
+                    } else {
+                        let string = self.lex_string()?;
+                        self.emit(string);
+                    }
             }
             '+' => {
                 self.emit_one_character(Token::Plus);

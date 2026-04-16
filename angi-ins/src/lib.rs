@@ -25,17 +25,18 @@ define_opcodes! {
     MAKETABLE = { code = 3 , layout = [RegAddr] },                     // Make Table
     SETATTR   = { code = 4 , layout = [RegAddr,RegAddr,RegAddr] },     // Set Attribute
     MAKETHUNK = { code = 5 , layout = [RegAddr,ConstIdx] },            // Make thunk
-    RETURN    = { code = 6 , layout = [RegAddr] },                     // Return 
+    RETURN    = { code = 6 , layout = [RegAddr] },                     // Return
     MAKELIST  = { code = 7 , layout = [RegAddr] },                     // Make List
     ADDLIST   = { code = 8 , layout = [RegAddr,RegAddr] },             // Add to List
     ADD       = { code = 9 , layout = [RegAddr,RegAddr,RegAddr] },     // Add
-    SUB       = { code = 10, layout = [RegAddr,RegAddr,RegAddr] },     // Subtract 
+    SUB       = { code = 10, layout = [RegAddr,RegAddr,RegAddr] },     // Subtract
     MUL       = { code = 11, layout = [RegAddr,RegAddr,RegAddr] },     // Mul
-    DIV       = { code = 12, layout = [RegAddr,RegAddr,RegAddr] },     // Div 
-    MAKEFUNC  = { code = 13, layout = [RegAddr,ConstIdx] },            // Make Function
-    LOADARG   = { code = 14, layout = [RegAddr] },                     // Load Arg
-    PUSHARG   = { code = 15, layout = [RegAddr] },                     // Push Arg
-    CALL      = { code = 16, layout = [RegAddr,RegAddr] },             // Call Function 
+    DIV       = { code = 12, layout = [RegAddr,RegAddr,RegAddr] },     // Div
+    CONCAT    = { code = 13, layout = [RegAddr,RegAddr,RegAddr] },     // Concat
+    MAKEFUNC  = { code = 14, layout = [RegAddr,ConstIdx] },            // Make Function
+    LOADARG   = { code = 15, layout = [RegAddr] },                     // Load Arg
+    PUSHARG   = { code = 16, layout = [RegAddr] },                     // Push Arg
+    CALL      = { code = 17, layout = [RegAddr,RegAddr] },             // Call Function
 }
 
 pub fn extract_opcode(byte: u32) -> Option<OpCode> {

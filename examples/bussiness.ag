@@ -1,0 +1,16 @@
+table HocSinh {
+    name: string,
+    age: num,
+    class: stirng
+}
+
+{
+    getHocSinhByName = (name: string): Result<HocSinh> =>
+      source.find("name", name);
+
+
+    storeHocSinh = (hs: HocSinh) => {};
+
+    getHocSinhXepHangNhat = (dshs: List<HocSinh>) => {}
+
+}

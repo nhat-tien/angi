@@ -88,6 +88,7 @@ fn expr_with_bp(
      let mut lhs = match lexer.next() {
         Some(Ok((_, Token::Number(num), (_, _)))) => Expr::Number(num),
         Some(Ok((_, Token::String(str), (_, _)))) => Expr::LiteralString(str),
+        Some(Ok((_, Token::MultilineString(str), (_, _)))) => Expr::LiteralStringMultiline(str),
         Some(Ok((_, Token::False, (_, _)))) => Expr::Boolean(false),
         Some(Ok((_, Token::True, (_, _)))) => Expr::Boolean(true),
         Some(Ok((_, Token::LeftParen, (_, _)))) => match lexer.peek() {
@@ -146,7 +147,7 @@ fn expr_with_bp(
         Some(Ok((_, Token::LeftBracket, (_, _)))) => expr_list(lexer, engine)?,
         Some(Ok((_, Token::Let, (_, _)))) => expr_let_in(lexer, engine)?,
         Some(Ok((line, tok, (col, _)))) => {
-            report_error(engine, line, col, format!("Not implement this token in parser, found {:?}", tok));
+            report_error(engine, line, col, format!("Expect an expression, found \"{}\"", tok.to_str_symbol()));
             return None;
         },
         _ => {
@@ -175,6 +176,7 @@ fn expr_with_bp(
             Some(Ok((_, Token::Dash, (_, _)))) => Operator::Sub,
             Some(Ok((_, Token::Star, (_, _)))) => Operator::Mul,
             Some(Ok((_, Token::Slash, (_, _)))) => Operator::Div,
+            Some(Ok((_, Token::DoubleDot, (_, _)))) => Operator::ConcatString,
             Some(Ok((line, tok, (col, _)))) => {
                 report_error(engine, *line, *col, format!("Expect Operator, found {:?}", tok));
                 return None;
@@ -468,7 +470,7 @@ fn expr_let_in(lexer: &mut Peekable<&mut Lexer>, engine: &mut DiagnosticEngine) 
             Some(Ok((_, Token::Name(name), (_, _)))) => name,
             Some(Ok((line_of_code, _, (start_pos, _)))) => {
                 report_error(engine, line_of_code, start_pos, "Atrribute Name not found".to_string());
-                sync_until(lexer, |tok| { matches!(tok, Token::In) } );
+                sync_until(lexer, |tok| { matches!(tok, Token::NewLine) } );
                 continue;
             }
             _ => panic!("Unexpect Parser Err"),
@@ -479,17 +481,24 @@ fn expr_let_in(lexer: &mut Peekable<&mut Lexer>, engine: &mut DiagnosticEngine) 
             Some(Ok((_, Token::Equal, (_, _)))) => {},
             Some(Ok((line_of_code, _, (start_pos, _)))) => {
                 report_error(engine, line_of_code, start_pos, "Expect '='".to_string());
-                sync_until(lexer, |tok| { matches!(tok, Token::In) } );
+                sync_until(lexer, |tok| { matches!(tok, Token::NewLine) } );
                 continue;
             }
             _ => panic!("Unexpect Parser Err"),
         };
 
+
         let rhs = expr_with_bp(lexer, engine, 0)?;
 
-        if !matches!(lexer.next(), Some(Ok((_, Token::Semicolon, (_, _))))) {
-            return None;
-        }
+        match lexer.next() {
+            Some(Ok((_, Token::Semicolon, (_, _)))) => {},
+            Some(Ok((line_of_code, _, (start_pos, _)))) => {
+                report_error(engine, line_of_code, start_pos, "Expect ';'".to_string());
+                sync_until(lexer, |tok| { matches!(tok, Token::NewLine) } );
+                continue;
+            }
+            _ => panic!("Unexpect Parser Err"),
+        };
 
         attr_set.insert(name, rhs);
     }
@@ -503,7 +512,7 @@ fn expr_let_in(lexer: &mut Peekable<&mut Lexer>, engine: &mut DiagnosticEngine) 
     })
 }
 
-
+#[allow(unused)]
 fn expr_pipe(lhs: Expr, lexer: &mut Peekable<&mut Lexer>, engine: &mut DiagnosticEngine) -> Option<Expr> {
     todo!()
 }
@@ -542,6 +551,7 @@ fn prefix_binding_power(op: Operator) -> ((), u8) {
 
 fn infix_binding_power(op: Operator) -> (u8, u8) {
     match op {
+        Operator::ConcatString => (0, 1),
         Operator::Add | Operator::Sub => (1, 2),
         Operator::Mul | Operator::Div => (3, 4),
     }
