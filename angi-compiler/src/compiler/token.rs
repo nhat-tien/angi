@@ -29,6 +29,12 @@ pub enum Token {
     MultilineString(String),
     Number(i32),
 
+    //interpolation
+    StringStart,
+    InterpStart,
+    InterpEnd,
+    StringEnd,
+
     // Preserve keyword
     Let,
     In,

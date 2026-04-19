@@ -4,6 +4,8 @@ mod thunk;
 mod load_global;
 
 pub use load_global::load_global;
+use crate::compiler::ast::InterpolatedPart;
+
 use super::{ast::{Expr, Operator}, error::BytecodeGenerationError};
 use constant::Constant;
 use core::panic;
@@ -242,6 +244,46 @@ impl BytecodeGen {
                 };
                 let reg_in_part = &self.visit_expr(in_part, false)?;
                 Ok(*reg_in_part)
+            }
+            Expr::InterpolatedString(parts) => {
+                let reg_value = self
+                    .get_register()
+                    .expect("Error in get register: the value");
+
+                for part in parts {
+                    match part {
+                        InterpolatedPart::String(str) => {
+                            let idx_const = self.make_const(Constant::String(str.clone()));
+
+                            let reg_const = self
+                                .get_register()
+                                .expect("Error in get register: the value");
+
+                            self.emit_ins(OpCode::LOADCONST.encode(vec![
+                                reg_const as u32,
+                                idx_const.try_into().expect("Error when convert idx_const to u32"),
+                            ]));
+
+                            self.emit_ins(OpCode::CONCAT.encode(vec![
+                                reg_value as u32,
+                                reg_value as u32,
+                                reg_const as u32,
+                            ]));
+
+                            self.free_register(reg_const as usize);
+                        }
+                        InterpolatedPart::Expr(expr) => {
+                            let reg_interpolation = &self.visit_expr(expr, true)?;
+
+                            self.emit_ins(OpCode::CONCAT.encode(vec![
+                                reg_value as u32,
+                                reg_value as u32,
+                                *reg_interpolation as u32,
+                            ]));
+                        }
+                    }
+                };
+                Ok(reg_value)
             }
             expr => panic!("Error: emit_expr, not implement yet {:?}", expr),
         }

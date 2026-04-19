@@ -55,6 +55,7 @@ impl Value {
     pub fn to_string(&self) -> Result<String, VmError> {
         match self {
             Value::String(str) => Ok(str.clone()),
+            Value::Int(int) => Ok(int.to_string()),
             _ => Err(VmError::ValueTypeMismatch {
                 message: "value not string".into(),
             }),

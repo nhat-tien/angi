@@ -3,14 +3,13 @@ use crate::error::VmError;
 use crate::function::Function;
 use crate::metadata::MetaData;
 use crate::register::Register;
-use angi_archive::Extractor;
-use angi_utils::log::{Log, LogLevel::DEBUG};
-use angi_utils::read_byte::{
-    read_i64, read_str_with_len, read_u8, read_u32,
-};
-use angi_utils::read_ins;
 use crate::value::{FromValue, ToArgValue, Value};
+use angi_archive::Extractor;
 use angi_ins::{MAGIC_NUMBER, OpCode, extract_opcode};
+use angi_utils::log::{Log, LogLevel::DEBUG};
+use angi_utils::read_byte::{read_i64, read_str_with_len, read_u8, read_u32};
+use angi_utils::read_ins;
+use std::any::Any;
 use std::collections::{HashMap, VecDeque};
 use std::fs::File;
 
@@ -22,7 +21,7 @@ pub struct VM {
     function_table: HashMap<usize, Function>,
     global_function_table: HashMap<String, usize>,
     bytes: Vec<u8>,
-    args_queue: VecDeque<Value>
+    args_queue: VecDeque<Value>,
 }
 
 impl Default for VM {
@@ -35,27 +34,27 @@ impl Default for VM {
             global_function_table: HashMap::new(),
             bytes: vec![],
             metadata: MetaData::default(),
-            args_queue: VecDeque::new()
+            args_queue: VecDeque::new(),
         }
     }
 }
 
 impl VM {
-
     pub fn new_from_bytes(bytes: Vec<u8>) -> Result<Self, VmError> {
         let mut vm = VM::default();
         vm.load(bytes)?;
         Ok(vm)
     }
 
-
     pub fn new_from_extractor(extractor: &Extractor) -> Result<Self, VmError> {
-
         let mut vm = VM::default();
 
-        let bytecode = extractor.extract_blob("bytecode".into()).ok_or_else(|| VmError::UnexpectedError {
-            message: "Error in get bytecode".into(),
-        })?;
+        let bytecode =
+            extractor
+                .extract_blob("bytecode".into())
+                .ok_or_else(|| VmError::UnexpectedError {
+                    message: "Error in get bytecode".into(),
+                })?;
 
         Log::write(DEBUG, "new_from_extractor");
 
@@ -75,13 +74,15 @@ impl VM {
             message: "error in open file itself".into(),
         })?;
 
-        let extractor = Extractor::init_from_file(file).map_err(|e| VmError::ExtractorError {
-            err: e
-        })?;
+        let extractor =
+            Extractor::init_from_file(file).map_err(|e| VmError::ExtractorError { err: e })?;
 
-        let bytecode = extractor.extract_blob("bytecode".into()).ok_or_else(|| VmError::UnexpectedError {
-            message: "Error in get bytecode".into(),
-        })?;
+        let bytecode =
+            extractor
+                .extract_blob("bytecode".into())
+                .ok_or_else(|| VmError::UnexpectedError {
+                    message: "Error in get bytecode".into(),
+                })?;
 
         Log::write(DEBUG, "new_from_itself");
 
@@ -111,8 +112,7 @@ impl VM {
         Ok(())
     }
 
-    pub fn eval_value(&mut self, str_addr: &str) -> Result<Value, VmError>
-    {
+    pub fn eval_value(&mut self, str_addr: &str) -> Result<Value, VmError> {
         Log::write(DEBUG, &format!("Try to eval {}", str_addr));
 
         let code_offset = self.metadata.code_offset;
@@ -192,8 +192,7 @@ impl VM {
 
         if magic_code != MAGIC_NUMBER {
             return Err(VmError::UnexpectedError {
-                message: "Magic code not suitable"
-                    .into(),
+                message: "Magic code not suitable".into(),
             });
         };
 
@@ -241,7 +240,6 @@ impl VM {
             read_u32(&self.bytes, &mut cursor).ok_or_else(|| VmError::UnexpectedError {
                 message: "Error in code_size".into(),
             })?;
-
 
         self.metadata = MetaData {
             magic_code,
@@ -347,7 +345,13 @@ impl VM {
                     message: "Error in get function_body".into(),
                 })?;
 
-            self.function_table.insert(i as usize, Function { nargs, offset: offset * 4 });
+            self.function_table.insert(
+                i as usize,
+                Function {
+                    nargs,
+                    offset: offset * 4,
+                },
+            );
         }
 
         Ok(())
@@ -356,7 +360,6 @@ impl VM {
     pub fn load_global_function_table(&mut self) -> Result<(), VmError> {
         let global_function_size = self.metadata.global_function_size;
         let global_function_offset = self.metadata.global_function_offset;
-
 
         let mut cursor = global_function_offset as usize;
 
@@ -371,14 +374,15 @@ impl VM {
                     message: "Error in get function_idx".into(),
                 })?;
 
-            let const_name = self.const_pool
-                .get(&(const_idx as usize))
-                .ok_or_else(|| VmError::UnexpectedError {
+            let const_name = self.const_pool.get(&(const_idx as usize)).ok_or_else(|| {
+                VmError::UnexpectedError {
                     message: format!("Error in get const_name {const_idx}"),
-                })?;
+                }
+            })?;
 
             if let ConstantValue::String(name) = const_name {
-                self.global_function_table.insert(name.clone(), function_idx as usize);
+                self.global_function_table
+                    .insert(name.clone(), function_idx as usize);
             }
         }
 
@@ -405,10 +409,103 @@ impl VM {
             let opcode = extract_opcode(ins).ok_or_else(|| VmError::ErrorInGetOpcode {
                 message: "Error in get opcode".into(),
                 ins,
-                cursor
+                cursor,
             })?;
 
             match opcode {
+                OpCode::ADD => {
+                    let params = OpCode::ADD.decode(ins);
+                    let result_reg = params[0];
+                    let v1 = self.registers.get(params[1] as usize).ok_or_else(|| {
+                        VmError::UnexpectedError {
+                            message: "Error in get v1 in ADD".into(),
+                        }
+                    })?;
+                    let v2 = self.registers.get(params[2] as usize).ok_or_else(|| {
+                        VmError::UnexpectedError {
+                            message: "Error in get v2 in ADD".into(),
+                        }
+                    })?;
+                    let v1_int = v1.val::<i64>()?;
+                    let v2_int = v2.val::<i64>()?;
+                    let result = v1_int + v2_int;
+                    self.registers.set(result_reg as usize, Value::Int(result));
+                }
+                OpCode::SUB => {
+                    let params = OpCode::SUB.decode(ins);
+                    let result_reg = params[0];
+
+                    let v1 = self.registers.get(params[1] as usize).ok_or_else(|| {
+                        VmError::UnexpectedError {
+                            message: "Error get v1 in SUB".into(),
+                        }
+                    })?;
+
+                    let v2 = self.registers.get(params[2] as usize).ok_or_else(|| {
+                        VmError::UnexpectedError {
+                            message: "Error get v2 in SUB".into(),
+                        }
+                    })?;
+
+                    let v1_int = v1.val::<i64>()?;
+                    let v2_int = v2.val::<i64>()?;
+
+                    let result = v1_int - v2_int;
+
+                    self.registers.set(result_reg as usize, Value::Int(result));
+                }
+                OpCode::MUL => {
+                    let params = OpCode::MUL.decode(ins);
+                    let result_reg = params[0];
+
+                    let v1 = self.registers.get(params[1] as usize).ok_or_else(|| {
+                        VmError::UnexpectedError {
+                            message: "Error get v1 in MUL".into(),
+                        }
+                    })?;
+
+                    let v2 = self.registers.get(params[2] as usize).ok_or_else(|| {
+                        VmError::UnexpectedError {
+                            message: "Error get v2 in MUL".into(),
+                        }
+                    })?;
+
+                    let v1_int = v1.val::<i64>()?;
+                    let v2_int = v2.val::<i64>()?;
+
+                    let result = v1_int * v2_int;
+
+                    self.registers.set(result_reg as usize, Value::Int(result));
+                }
+                OpCode::DIV => {
+                    let params = OpCode::DIV.decode(ins);
+                    let result_reg = params[0];
+
+                    let v1 = self.registers.get(params[1] as usize).ok_or_else(|| {
+                        VmError::UnexpectedError {
+                            message: "Error get v1 in DIV".into(),
+                        }
+                    })?;
+
+                    let v2 = self.registers.get(params[2] as usize).ok_or_else(|| {
+                        VmError::UnexpectedError {
+                            message: "Error get v2 in DIV".into(),
+                        }
+                    })?;
+
+                    let v1_int = v1.val::<i64>()?;
+                    let v2_int = v2.val::<i64>()?;
+
+                    if v2_int == 0 {
+                        return Err(VmError::UnexpectedError {
+                            message: "Division by zero".into(),
+                        });
+                    }
+
+                    let result = v1_int / v2_int;
+
+                    self.registers.set(result_reg as usize, Value::Int(result));
+                }
                 OpCode::MAKETABLE => {
                     let params = OpCode::MAKETABLE.decode(ins);
                     self.registers.set_new_table(params[0] as usize);
@@ -462,15 +559,17 @@ impl VM {
                 }
                 OpCode::MAKEFUNC => {
                     let params = OpCode::MAKEFUNC.decode(ins);
-                    self.registers.set(params[0] as usize, Value::Function(params[1]));
+                    self.registers
+                        .set(params[0] as usize, Value::Function(params[1]));
                 }
                 OpCode::LOADARG => {
                     let params = OpCode::LOADARG.decode(ins);
-                    let arg = self.args_queue.pop_front().ok_or_else(|| {
-                        VmError::UnexpectedError {
-                            message: "Error in pop args_queue".into(),
-                        }
-                    })?;
+                    let arg =
+                        self.args_queue
+                            .pop_front()
+                            .ok_or_else(|| VmError::UnexpectedError {
+                                message: "Error in pop args_queue".into(),
+                            })?;
                     self.registers.set(params[0] as usize, arg);
                 }
                 OpCode::PUSHARG => {
@@ -490,39 +589,63 @@ impl VM {
                         }
                     })? {
                         Value::String(name) => {
-                            let function_idx = self.global_function_table.get(&name).ok_or_else(|| {
-                                VmError::NotFoundFunction {
-                                    message: format!("not found {name}")
-                                }
-                             })?;
-                            let function = self.function_table.get(function_idx).ok_or_else(|| {
-                                VmError::NotFoundFunction {
-                                    message: format!("not found {function_idx}")
-                                }
-                             })?;
+                            let function_idx =
+                                self.global_function_table.get(&name).ok_or_else(|| {
+                                    VmError::NotFoundFunction {
+                                        message: format!("not found {name}"),
+                                    }
+                                })?;
+                            let function =
+                                self.function_table.get(function_idx).ok_or_else(|| {
+                                    VmError::NotFoundFunction {
+                                        message: format!("not found {function_idx}"),
+                                    }
+                                })?;
                             let cursor = (function.offset + self.metadata.code_offset) as usize;
                             let result = self.handle_instruction(cursor)?;
                             self.registers.set(params[0] as usize, result);
                         }
                         Value::Function(function_idx) => {
-                            let function = self.function_table.get(&(function_idx as usize)).ok_or_else(|| {
-                                VmError::NotFoundFunction {
-                                    message: format!("not found {function_idx}")
-                                }
-                             })?;
+                            let function = self
+                                .function_table
+                                .get(&(function_idx as usize))
+                                .ok_or_else(|| VmError::NotFoundFunction {
+                                    message: format!("not found {function_idx}"),
+                                })?;
                             let cursor = (function.offset + self.metadata.code_offset) as usize;
                             let result = self.handle_instruction(cursor)?;
                             self.registers.set(params[0] as usize, result);
                         }
                         _ => {}
                     }
-
                 }
                 OpCode::MAKETHUNK => {
                     let params = OpCode::MAKETHUNK.decode(ins);
                     let reg = params[0];
                     let thunk_idx = params[1];
                     self.registers.set(reg as usize, Value::Thunk(thunk_idx));
+                }
+                OpCode::CONCAT => {
+                    let params = OpCode::CONCAT.decode(ins);
+                    let reg_dist = params[0];
+
+                    let v1 = self.registers.get(params[1] as usize).ok_or_else(|| {
+                        VmError::UnexpectedError {
+                            message: "Error get v1 in DIV".into(),
+                        }
+                    })?;
+
+                    let v2 = self.registers.get(params[2] as usize).ok_or_else(|| {
+                        VmError::UnexpectedError {
+                            message: "Error get v2 in DIV".into(),
+                        }
+                    })?;
+
+                    let mut v1_str = v1.to_string()?;
+                    let v2_str = v2.to_string()?;
+                    v1_str.push_str(&v2_str);
+
+                    self.registers.set(reg_dist as usize, Value::String(v1_str));
                 }
                 OpCode::RETURN => {
                     let params = OpCode::RETURN.decode(ins);
@@ -563,7 +686,10 @@ impl VM {
         Ok(value)
     }
 
-    pub fn eval_function<T>(&mut self, function_idx: u32, args: T) -> Result<Value, VmError> where T : ToArgValue {
+    pub fn eval_function<T>(&mut self, function_idx: u32, args: T) -> Result<Value, VmError>
+    where
+        T: ToArgValue,
+    {
         let code_offset = self.metadata.code_offset;
         let mut value: Value = Value::None;
 

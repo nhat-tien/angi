@@ -2,6 +2,7 @@ use super::ast::{Expr, Operator};
 use super::error::ParseError;
 use super::lexer::Lexer;
 use super::token::Token;
+use crate::compiler::ast::InterpolatedPart;
 use crate::diagnostic::{Diagnostic, DiagnosticEngine, Severity, Span};
 use std::collections::HashMap;
 use std::iter::Peekable;
@@ -146,6 +147,7 @@ fn expr_with_bp(
         Some(Ok((_, Token::LeftBrace, (_, _)))) => expr_table(lexer, engine)?,
         Some(Ok((_, Token::LeftBracket, (_, _)))) => expr_list(lexer, engine)?,
         Some(Ok((_, Token::Let, (_, _)))) => expr_let_in(lexer, engine)?,
+        Some(Ok((_, Token::StringStart, (_, _)))) => expr_interpolated_str(lexer, engine)?,
         Some(Ok((line, tok, (col, _)))) => {
             report_error(engine, line, col, format!("Expect an expression, found \"{}\"", tok.to_str_symbol()));
             return None;
@@ -165,6 +167,7 @@ fn expr_with_bp(
             Some(Ok((_, Token::NewLine, (_, _)))) => break,
             Some(Ok((_, Token::RightParen, (_, _)))) => break,
             Some(Ok((_, Token::RightBrace, (_, _)))) => break,
+            Some(Ok((_, Token::InterpEnd, (_, _)))) => break,
             Some(Ok((_, Token::Semicolon, (_, _)))) => break,
             Some(Ok((_, Token::Comma, (_, _)))) => break,
             Some(Ok((_, Token::RightBracket, (_, _)))) => break,
@@ -510,6 +513,29 @@ fn expr_let_in(lexer: &mut Peekable<&mut Lexer>, engine: &mut DiagnosticEngine) 
         let_part: attr_set,
         in_part: Box::new(in_part)
     })
+}
+
+fn expr_interpolated_str(lexer: &mut Peekable<&mut Lexer>, engine: &mut DiagnosticEngine) -> Option<Expr> {
+    let mut parts: Vec<InterpolatedPart> = vec![];
+    loop {
+        match lexer.next() {
+            None => break,
+            Some(Ok((_, Token::StringEnd, (_, _)))) => break,
+            Some(Ok((_, Token::InterpEnd, (_, _)))) => continue,
+            Some(Ok((_, Token::String(str), (_, _)))) => parts.push(InterpolatedPart::String(str)),
+            Some(Ok((_, Token::InterpStart, (_, _)))) => {
+                let rhs = expr_with_bp(lexer, engine, 0)?;
+                parts.push(InterpolatedPart::Expr(rhs));
+            },
+            Some(Ok((line_of_code, tok, (start_pos, _)))) => {
+                report_error(engine, line_of_code, start_pos, format!("Error in interpolatio '{:?}'", tok));
+                sync_until(lexer, |tok| { matches!(tok, Token::NewLine | Token::Semicolon) } );
+                continue;
+            },
+            _ => panic!("Unexpect Parser Err"),
+        }
+    }
+    Some(Expr::InterpolatedString(parts))
 }
 
 #[allow(unused)]

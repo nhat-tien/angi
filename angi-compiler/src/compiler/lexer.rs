@@ -18,6 +18,9 @@ pub struct Lexer<'a>
     chr2: Option<char>,
     current_pos: u32,
     current_loc: u32,
+    is_in_interpolation: bool,
+    is_in_string_has_interp: bool,
+    is_in_string_multiline_has_interp: bool
 }
 
 impl<'a> Lexer<'a>
@@ -31,6 +34,9 @@ impl<'a> Lexer<'a>
             chr2: None,
             current_loc: 1,
             current_pos: 0,
+            is_in_interpolation: false,
+            is_in_string_has_interp: false,
+            is_in_string_multiline_has_interp: false
         };
 
         lx.move_next_char();
@@ -50,6 +56,9 @@ impl<'a> Lexer<'a>
             chr2: None,
             current_loc: 1,
             current_pos: 0,
+            is_in_interpolation: false,
+            is_in_string_has_interp: false,
+            is_in_string_multiline_has_interp: false
         };
 
         lx.move_next_char();
@@ -148,6 +157,14 @@ impl<'a> Lexer<'a>
         }
     }
 
+    fn is_interpolation_start(&self) -> bool {
+        match self.chr1 {
+            Some('{') => !self.is_escaped(),
+            Some(_) => false,
+            None => false
+        }
+    }
+
     fn is_multiline_string_continuation(&self) -> bool {
         match self.chr1 {
             Some('"') => self.is_escaped(),
@@ -187,7 +204,7 @@ impl<'a> Lexer<'a>
         }
     }
 
-    fn lex_string(&mut self) -> LexResult {
+    fn lex_string(&mut self) -> Result<(), LexicalError> {
         let mut string = String::new();
         let line = self.get_line();
         let start_pos = self.get_pos();
@@ -196,6 +213,9 @@ impl<'a> Lexer<'a>
             if !self.is_string_continuation() {
                 break;
             }
+            if self.is_interpolation_start() {
+                return self.lex_string_interpolation_start(string);
+            }
             self.move_next_char();
             string.push(self.chr0.expect("lex_string"));
         }
@@ -203,7 +223,31 @@ impl<'a> Lexer<'a>
         self.move_next_char(); // Get end position of the last "
         let end_pos = self.get_pos();
 
-        Ok((line, Token::String(string), (start_pos, end_pos)))
+        if self.is_in_string_has_interp {
+            self.is_in_string_has_interp = false;
+            self.emit((line, Token::String(string), (start_pos, end_pos)));
+            self.emit((line, Token::StringEnd, (end_pos, end_pos)));
+        } else {
+            self.emit((line, Token::String(string), (start_pos, end_pos)));
+        }
+        Ok(())
+    }
+
+
+    fn lex_string_interpolation_start(&mut self, string_part: String) -> Result<(), LexicalError> {
+        let line = self.get_line();
+        let start_pos = self.get_pos();
+
+        if !self.is_in_string_has_interp {
+            self.is_in_string_has_interp = true;
+            self.emit((line, Token::StringStart, (start_pos, start_pos)));
+        };
+        self.is_in_interpolation = true;
+        self.emit((line, Token::String(string_part), (start_pos, start_pos)));
+        self.emit((line, Token::InterpStart, (start_pos, start_pos)));
+        self.move_next_char(); // consume the {
+
+        Ok(())
     }
 
     fn lex_multiline_string(&mut self) -> LexResult {
@@ -257,7 +301,18 @@ impl<'a> Lexer<'a>
                 self.emit_one_character(Token::LeftBrace);
             }
             '}' => {
-                self.emit_one_character(Token::RightBrace);
+                if self.is_in_interpolation {
+                    let line = self.get_line();
+                    let start_pos = self.get_pos();
+                    self.is_in_interpolation = false;
+                    self.emit((line, Token::InterpEnd, (start_pos, start_pos)));
+                    self.lex_string()?;
+                } else if  self.is_in_string_multiline_has_interp {
+                    let string = self.lex_multiline_string()?;
+                    self.emit(string);
+                } else {
+                   self.emit_one_character(Token::RightBrace);
+                }
             }
             '[' => {
                 self.emit_one_character(Token::LeftBracket);
@@ -298,8 +353,7 @@ impl<'a> Lexer<'a>
                         let string = self.lex_multiline_string()?;
                         self.emit(string);
                     } else {
-                        let string = self.lex_string()?;
-                        self.emit(string);
+                        self.lex_string()?;
                     }
             }
             '+' => {

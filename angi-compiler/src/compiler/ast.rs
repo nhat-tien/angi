@@ -38,6 +38,13 @@ pub enum Expr {
         args: Vec<Expr>
     },
     Var(String),
+    InterpolatedString(Vec<InterpolatedPart>)
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum InterpolatedPart {
+    String(String),
+    Expr(Expr)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
