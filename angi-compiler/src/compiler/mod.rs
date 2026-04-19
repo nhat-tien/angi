@@ -2,7 +2,7 @@ use bytecode::{load_global, BytecodeGen};
 use error::{BytecodeGenerationError, CompilationError, ParseError};
 use lexer::Lexer;
 use parser::parse_with_engine;
-use crate::{diagnostic::DiagnosticEngine, type_checking};
+use crate::{diagnostic::DiagnosticEngine, macro_function::MacroRegistry, type_checking};
 
 pub mod ast;
 pub mod error;
@@ -27,10 +27,27 @@ pub fn compile(src: &str, filename: &str) -> Result<Vec<u8>, CompilationError> {
         }
     };
 
-    let global_func = load_global();
+    // let global_func = load_global();
 
-    let mut bytecode_genaration = BytecodeGen::new()
-          .with_global_func(global_func);
+    let mut macro_registry = MacroRegistry::new();
+    match macro_registry.expand_expr_inplace(&mut ast) {
+        Ok(_) => {},
+        Err(_) => {
+            engine.report(crate::diagnostic::Diagnostic {
+                severity: crate::diagnostic::Severity::Error,
+                message: "Somthing wrong in macro expand".into(),
+                span: crate::diagnostic::Span { line: 1, column: 0 },
+                span_len: 1,
+                help: Some("Pray to god".into()),
+                notes: vec![],
+            });
+            engine.emit(src, filename);
+            return Err(CompilationError::MacroCheckingError);
+        }
+    };
+
+    let mut bytecode_genaration = BytecodeGen::new();
+          // .with_global_func(global_func);
 
     optimization::optimization(&mut ast);
 
@@ -58,6 +75,7 @@ pub fn compile(src: &str, filename: &str) -> Result<Vec<u8>, CompilationError> {
                 help,
                 notes: vec![],
             });
+            engine.emit(src, filename);
             return Err(CompilationError::BytecodeGenerationError(err));
         }
     };
@@ -119,6 +137,7 @@ pub fn compile_and_type_checking(src: &str, filename: &str) -> Result<Vec<u8>, C
                 help,
                 notes: vec![],
             });
+            engine.emit(src, filename);
             return Err(CompilationError::BytecodeGenerationError(err));
         }
     };

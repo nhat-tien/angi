@@ -9,7 +9,6 @@ use angi_ins::{MAGIC_NUMBER, OpCode, extract_opcode};
 use angi_utils::log::{Log, LogLevel::DEBUG};
 use angi_utils::read_byte::{read_i64, read_str_with_len, read_u8, read_u32};
 use angi_utils::read_ins;
-use std::any::Any;
 use std::collections::{HashMap, VecDeque};
 use std::fs::File;
 

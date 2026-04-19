@@ -23,6 +23,7 @@ pub enum CompilationError {
     },
     ParseError(ParseError),
     BytecodeGenerationError(BytecodeGenerationError),
+    MacroCheckingError,
     ArchiveError,
     UnexpectedError
 }

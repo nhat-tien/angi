@@ -8,9 +8,10 @@ use angi_runtime::value::{Function, List, Table};
 use angi_runtime::vm::VM;
 
 use crate::compiler::bytecode::load_global;
-use crate::compiler::{compile, compile_and_type_checking};
+use crate::compiler::compile;
 use crate::compiler::{bytecode::BytecodeGen, lexer::Lexer, parser::parse};
 use crate::compiler::optimization::optimization;
+use crate::macro_function::MacroRegistry;
 const PADDING: usize = 16;
 
 
@@ -38,8 +39,15 @@ pub fn index(args: &[String]) {
 
             let mut lexer = Lexer::new(content.chars());
 
-            let ast = match parse(&mut lexer) {
+            let mut ast = match parse(&mut lexer) {
                 Ok(ast) => ast,
+                Err(err) => panic!("Err in parse {err:?}"),
+            };
+
+
+            let mut macro_registry = MacroRegistry::new();
+            match macro_registry.expand_expr_inplace(&mut ast) {
+                Ok(_) => {},
                 Err(err) => panic!("Err in parse {err:?}"),
             };
 

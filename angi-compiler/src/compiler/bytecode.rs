@@ -58,8 +58,8 @@ impl BytecodeGen {
         self.free_register(reg as usize);
         self.emit_ins(OpCode::RETURN.encode(vec![reg as u32]));
 
-        let _ = self.visit_remain_thunk();
-        let _ = self.visit_function();
+        self.visit_remain_thunk()?;
+        self.visit_function()?;
 
         let mut bytes = vec![];
         self.add_header_to_binary(&mut bytes);
@@ -186,7 +186,6 @@ impl BytecodeGen {
 
                         self.global_function_in_used.insert(name.clone(), idx_func);
                     }
-
 
                     if args.len() != function.params.len() {
                         panic!(

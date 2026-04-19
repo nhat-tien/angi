@@ -62,7 +62,7 @@ fn run(vm: &mut VM, input: &str) -> Result<String, String> {
             let result = vm.eval_value(command.next().unwrap());
             match result {
                 Ok(val) => Ok(format!("{:?}", val)),
-                Err(_) => Err("Error".into()),
+                Err(vm_err) => Err(vm_err.to_string()),
             }
         }
         _ => Ok(input.to_string()),

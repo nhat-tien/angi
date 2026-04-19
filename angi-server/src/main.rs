@@ -65,6 +65,7 @@ async fn main() -> Result<(), VmError> {
     Ok(())
 }
 
+#[allow(unused_variables)]
 fn app(vm: Avm, static_store: ArcStore) -> Result<Router, VmError> {
 
     let mut ready_vm = vm.lock().unwrap();
@@ -141,6 +142,7 @@ fn make_json_handler(json: String) -> axum::routing::MethodRouter {
     })
 }
 
+#[allow(dead_code)]
 fn static_handler(store: Arc<StaticStore>) -> axum::routing::MethodRouter {
     axum::routing::get(move |Path(path): Path<String>| {
         let store = store.clone();

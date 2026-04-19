@@ -1,32 +1,6 @@
 let
-   a =  "cds";
-   b =  "cds";
+   name =  "Tien";
 in
 {
-    port = """
-    SELECT *
-    FROM student s
-    WHERE s.Id = {}
-    """;
-
-    routes = [
-       {
-           path = "/";
-           handler = () => html("<h1>Hello</h1>");
-       }
-    ];
-
-
-    middleware = [
-       () => {},
-       () => {},
-       () => {},
-       () => {},
-       () => {},
-       () => {},
-       () => {},
-    ];
-
-
-
+    port = "Hello {name}, How are you?";
 }
