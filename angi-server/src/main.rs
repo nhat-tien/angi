@@ -1,9 +1,10 @@
 use std::sync::{Arc, Mutex};
 
 mod logger;
+mod utils;
 
-use axum::extract::Path;
-use axum::http::{header, StatusCode};
+use axum::extract::{Path};
+use axum::http::{StatusCode, header};
 use axum::middleware;
 use axum::response::Response;
 use axum::{
@@ -12,11 +13,13 @@ use axum::{
     routing::get,
     Json,
 };
-use angi_runtime::value::{Function, List, Table};
+use angi_runtime::value::{Function, List, Table, Value};
 use angi_runtime::{error::VmError, vm::VM};
 use angi_archive::{Extractor, StaticStore};
 use colored::Colorize;
 use tower_http::services::ServeDir;
+
+use crate::utils::make_vm_handler;
 
 type Avm = Arc<Mutex<VM>>;
 type ArcStore = Arc<StaticStore>;
@@ -45,7 +48,7 @@ async fn main() -> Result<(), VmError> {
         .await
         .unwrap();
 
-    let avm = Arc::new(Mutex::new(vm));
+    // let avm = Arc::new(Mutex::new(vm));
     let static_store = Arc::new(StaticStore::new(extractor));
 
     logger::log_startup(
@@ -60,15 +63,16 @@ async fn main() -> Result<(), VmError> {
         listener.local_addr().unwrap()
     ));
 
-    axum::serve(listener, app(avm, static_store)?).await.unwrap();
+    axum::serve(listener, app(vm, static_store)?).await.unwrap();
 
     Ok(())
 }
 
 #[allow(unused_variables)]
-fn app(vm: Avm, static_store: ArcStore) -> Result<Router, VmError> {
+fn app(vm: VM, static_store: ArcStore) -> Result<Router, VmError> {
 
-    let mut ready_vm = vm.lock().unwrap();
+    // let mut ready_vm = vm.lock().unwrap();
+    let mut ready_vm = vm.clone();
 
     let static_config = ready_vm.eval::<Table>("static").unwrap();
 
@@ -88,40 +92,45 @@ fn app(vm: Avm, static_store: ArcStore) -> Result<Router, VmError> {
     )
 }
 
-fn build_router(vm: Avm) -> Result<Router, VmError> {
-    let mut ready_vm = vm.lock().unwrap();
-    let mut list_routes = ready_vm.eval::<List<Table>>("routes")?;
-    list_routes.force(&mut ready_vm);
+fn build_router(mut vm: VM) -> Result<Router, VmError> {
+    // let mut ready_vm = vm.lock().unwrap();
+    let mut list_routes = vm.eval::<List<Table>>("routes")?;
+    list_routes.force(&mut vm);
     let list_routes_iter = list_routes.iter().unwrap();
 
     Ok(list_routes_iter.fold(Router::new(), |router, route| {
         let path = route.get::<String>("path").unwrap();
         let function = route.get::<Function>("handler").unwrap();
-        let result: Table = function.call(&mut ready_vm, ()).unwrap();
+        let method = route.get::<String>("method").unwrap();
+        // let result: Table = function.call(&mut ready_vm, ()).unwrap();
 
-        let type_of_handler = result.get::<String>("type").unwrap();
+        // let type_of_handler = result.get::<String>("type").unwrap();
+        println!("Hello");
+        router.route(&path, make_vm_handler(&method, function, vm.clone()))
 
-        match type_of_handler.as_str() {
-            "html" => {
-                let html = result.get::<String>("html").unwrap();
-                router.route(&path, make_html_handler(html))
-            },
-            "htmlTemplate" => {
-                let path_template = result.get::<String>("path").unwrap();
-                let html = std::fs::read_to_string(&path_template)
-                .unwrap_or_else(|_| "<h1>Template not found</h1>".to_string());
-
-                router.route(&path, make_html_handler(html))
-            },
-            "json" => {
-                let json = result.get::<String>("body").unwrap();
-                router.route(&path, make_json_handler(json))
-            },
-            _ => todo!()
-        }
+        // match type_of_handler.as_str() {
+        //     "html" => {
+        //         let html = result.get::<String>("html").unwrap();
+        //         router.route(&path, make_html_handler(html))
+        //     },
+        //     "htmlTemplate" => {
+        //         let path_template = result.get::<String>("path").unwrap();
+        //         let html = std::fs::read_to_string(&path_template)
+        //         .unwrap_or_else(|_| "<h1>Template not found</h1>".to_string());
+        //
+        //         router.route(&path, make_html_handler(html))
+        //     },
+        //     "json" => {
+        //         let mut json = result.get_value("body").unwrap();
+        //         json.resolve_thunk(&mut ready_vm).unwrap();
+        //         router.route(&path, make_json_handler_v2(json))
+        //     },
+        //     _ => todo!()
+        // }
     }))
 }
 
+#[allow(dead_code)]
 fn make_html_handler(html: String) -> axum::routing::MethodRouter {
     get(move || {
         async move { Html(html.clone()) }
@@ -135,12 +144,22 @@ fn make_html_template_handler(path: String) -> axum::routing::MethodRouter {
     })
 }
 
-fn make_json_handler(json: String) -> axum::routing::MethodRouter {
-    let v: serde_json::Value = serde_json::from_str(&json).map_err(|e| e.to_string()).unwrap();
+// fn make_json_handler(json: String) -> axum::routing::MethodRouter {
+//     let v: serde_json::Value = serde_json::from_str(&json).map_err(|e| e.to_string()).unwrap();
+//     get(move || {
+//         async move { Json(v) }
+//     })
+// }
+
+#[allow(dead_code)]
+fn make_json_handler_v2(json: Value) -> axum::routing::MethodRouter {
+    // let v: serde_json::Value = serde_json::from_str(&json).map_err(|e| e.to_string()).unwrap();
     get(move || {
-        async move { Json(v) }
+        async move { Json(json) }
     })
 }
+
+
 
 #[allow(dead_code)]
 fn static_handler(store: Arc<StaticStore>) -> axum::routing::MethodRouter {

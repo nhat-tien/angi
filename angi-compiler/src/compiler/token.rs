@@ -14,7 +14,7 @@ pub enum Token {
     Bar,             // |
     Dot,             // .
     DoubleDot,       // ..
-
+    Dolar,           // $
     // Operator
     Plus,            // +
     Dash,            // -

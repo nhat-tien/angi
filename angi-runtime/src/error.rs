@@ -13,7 +13,8 @@ pub enum VmError {
         ins: u32,
         cursor: usize
     },
-    ExtractorError { err: ExtractorError }
+    ExtractorError { err: ExtractorError },
+    NotFoundAttribute { message: String }
 }
 
 impl fmt::Display for VmError {
@@ -30,7 +31,8 @@ impl fmt::Display for VmError {
             VmError::ErrorInGetOpcode { message, ins, cursor } => {
                 write!(f, "[ErrorInGetOpcode] {message}, ins: {ins}, cursor: {cursor}")
             }
-            _e => {
+            VmError::NotFoundAttribute { message } => write!(f, "[NotFoundAttribute] {message}"),
+            _ => {
                 write!(f, "Error not implement display yet")
             }
         }

@@ -180,6 +180,10 @@ fn expr_with_bp(
             Some(Ok((_, Token::Star, (_, _)))) => Operator::Mul,
             Some(Ok((_, Token::Slash, (_, _)))) => Operator::Div,
             Some(Ok((_, Token::DoubleDot, (_, _)))) => Operator::ConcatString,
+            Some(Ok((_, Token::Dot, (_, _)))) => {
+                lexer.next();
+                return expr_member_access(lexer, engine, lhs);
+            },
             Some(Ok((line, tok, (col, _)))) => {
                 report_error(engine, *line, *col, format!("Expect Operator, found {:?}", tok));
                 return None;
@@ -541,6 +545,38 @@ fn expr_interpolated_str(lexer: &mut Peekable<&mut Lexer>, engine: &mut Diagnost
 #[allow(unused)]
 fn expr_pipe(lhs: Expr, lexer: &mut Peekable<&mut Lexer>, engine: &mut DiagnosticEngine) -> Option<Expr> {
     todo!()
+}
+
+
+fn expr_member_access(lexer: &mut Peekable<&mut Lexer>, engine: &mut DiagnosticEngine, parent: Expr) -> Option<Expr> {
+    let mut lhs = match lexer.next() {
+        Some(Ok((_, Token::Name(member), _))) => Expr::AccessField { parent: Box::new(parent), child: member.clone() },
+        Some(Ok((line, tok, (col, _)))) => {
+            report_error(engine, line, col, format!("Expected access field name, found {:?}", tok));
+            return None;
+        },
+        _ => {
+            report_error(engine, 0, 0, "Expected access field name, found nothing".into());
+            return None;
+        }
+    };
+
+    while let Some(Ok((_, Token::Dot, _))) = lexer.peek() {
+        lexer.next();
+        lhs = match lexer.next() {
+            Some(Ok((_, Token::Name(member), _))) => Expr::AccessField { parent: Box::new(lhs), child: member.clone() },
+            Some(Ok((line, tok, (col, _)))) => {
+                report_error(engine, line, col, format!("Expected access field name, found {:?}", tok));
+                return None;
+            },
+            _ => {
+                report_error(engine, 0, 0, "Expected access field name, found nothing".into());
+                return None;
+            }
+        };
+    }
+
+    Some(lhs)
 }
 
 fn expect_token(

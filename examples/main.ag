@@ -1,6 +1,24 @@
-let
-   name =  "Tien";
-in
 {
-    port = "Hello {name}, How are you?";
+    port = 4000 - 20;
+    routes = [
+       {
+           path = "/";
+           handler = () => html("<h1>Hello</h1>");
+       },
+       {
+           path = "/hello";
+           handler = () => htmlTemplate("./index.html");
+       },
+       {
+           path = "/json-test";
+           handler = () => json({
+               name = "Tien";
+               message = "Hello";
+           });
+       }
+    ];
+    static = {
+      prefix = "/assets";
+      dir = "./assets";
+    };
 }

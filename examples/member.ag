@@ -1,0 +1,4 @@
+{
+    port = 4000 - 20;
+    routes = (req) => "Hello {req.header.name}";
+}

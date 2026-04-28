@@ -1,5 +1,6 @@
 #[macro_use]
 mod macros;
+mod native_function;
 
 pub const VERSION: u32 = 0x00000001; // "0.0.1"
 pub const METADATA_BYTES: u32 = 48;
@@ -17,6 +18,11 @@ pub const CONST_MASK: u32 = (1 << CONST_BITS) - 1;   // 0000_0000 0000_1111 1111
 pub enum Operand {
     RegAddr,
     ConstIdx,
+}
+
+pub enum OperandWithNum {
+    RegAddr(u32),
+    ConstIdx(u32),
 }
 
 define_opcodes! {
@@ -37,6 +43,7 @@ define_opcodes! {
     LOADARG   = { code = 15, layout = [RegAddr] },                     // Load Arg
     PUSHARG   = { code = 16, layout = [RegAddr] },                     // Push Arg
     CALL      = { code = 17, layout = [RegAddr,RegAddr] },             // Call Function
+    GETFIELD  = { code = 18, layout = [RegAddr,RegAddr,RegAddr] },             // Call Function
 }
 
 pub fn extract_opcode(byte: u32) -> Option<OpCode> {

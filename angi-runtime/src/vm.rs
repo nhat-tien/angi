@@ -38,6 +38,21 @@ impl Default for VM {
     }
 }
 
+impl Clone for VM {
+    fn clone(&self) -> Self {
+        Self {
+            registers: Register::new(),
+            const_pool: self.const_pool.clone(),
+            thunk_table: self.thunk_table.clone(),
+            function_table: self.function_table.clone(),
+            global_function_table: self.global_function_table.clone(),
+            bytes: self.bytes.clone(),
+            metadata: self.metadata,
+            args_queue: VecDeque::new(),
+        }
+    }
+}
+
 impl VM {
     pub fn new_from_bytes(bytes: Vec<u8>) -> Result<Self, VmError> {
         let mut vm = VM::default();
@@ -630,13 +645,13 @@ impl VM {
 
                     let v1 = self.registers.get(params[1] as usize).ok_or_else(|| {
                         VmError::UnexpectedError {
-                            message: "Error get v1 in DIV".into(),
+                            message: "Error get v1 in CONCAT".into(),
                         }
                     })?;
 
                     let v2 = self.registers.get(params[2] as usize).ok_or_else(|| {
                         VmError::UnexpectedError {
-                            message: "Error get v2 in DIV".into(),
+                            message: "Error get v2 in CONCAT".into(),
                         }
                     })?;
 
@@ -653,6 +668,37 @@ impl VM {
                             message: "Error in get registers value".into(),
                         }
                     });
+                }
+                OpCode::GETFIELD => {
+                    let params = OpCode::GETFIELD.decode(ins);
+                    let v1 = self.registers.get(params[1] as usize).ok_or_else(|| {
+                        VmError::UnexpectedError {
+                            message: "Error get v in GETFIELD".into(),
+                        }
+                    })?;
+
+                    let v2 = self.registers.get(params[2] as usize).ok_or_else(|| {
+                        VmError::UnexpectedError {
+                            message: "Error get v in GETFIELD".into(),
+                        }
+                    })?;
+
+                    match (v1, v2) {
+                        (Value::Table(table), Value::String(name)) => {
+                            let value =
+                                table
+                                    .get(vec![&name])
+                                    .ok_or_else(|| VmError::NotFoundFunction {
+                                        message: format!("Table not have {} attribute", name),
+                                    })?;
+                            self.registers.set(params[0] as usize, value);
+                        }
+                        _ => {
+                            return Err(VmError::UnexpectedError {
+                                message: "Unexpect opcode".into(),
+                            });
+                        }
+                    }
                 }
                 _ => {
                     return Err(VmError::UnexpectedError {
@@ -674,7 +720,7 @@ impl VM {
         T::from_value(v)
     }
 
-    fn eval_thunk(&mut self, thunk_idx: u32) -> Result<Value, VmError> {
+    pub fn eval_thunk(&mut self, thunk_idx: u32) -> Result<Value, VmError> {
         let code_offset = self.metadata.code_offset;
         let mut value: Value = Value::None;
         if let Some(thunk_offset) = self.thunk_table.get(&(thunk_idx as usize)) {

@@ -159,7 +159,13 @@ impl<'a> Lexer<'a>
 
     fn is_interpolation_start(&self) -> bool {
         match self.chr1 {
-            Some('{') => !self.is_escaped(),
+            Some('$') => {
+                match self.chr2 {
+                    Some('{') => !self.is_escaped(),
+                    Some(_) => false,
+                    None => false
+                }
+            },
             Some(_) => false,
             None => false
         }
@@ -245,6 +251,7 @@ impl<'a> Lexer<'a>
         self.is_in_interpolation = true;
         self.emit((line, Token::String(string_part), (start_pos, start_pos)));
         self.emit((line, Token::InterpStart, (start_pos, start_pos)));
+        self.move_next_char(); // consume the $
         self.move_next_char(); // consume the {
 
         Ok(())

@@ -2,7 +2,7 @@ use std::fs::{self, File};
 use std::io::{BufReader, Write};
 
 use angi_archive::{Archiver, Extractor};
-use angi_ins::extract_opcode;
+use angi_ins::{OpCode, OperandWithNum, extract_opcode};
 use angi_utils::read_from_buf_reader::{read_i64, read_u32, read_u8};
 use angi_runtime::value::{Function, List, Table};
 use angi_runtime::vm::VM;
@@ -211,19 +211,21 @@ pub fn print_bytecode(r: &mut BufReader<File>) {
 }
 
 fn read_const(r: &mut BufReader<File>, mut const_size: u32) {
+    let mut count = 1;
     while const_size > 0 {
         let ( const_type, const_type_u32) = read_u8(r);
         print!("{:<PADDING$}{}", "CONST TYPE", const_type);
 
         match const_type_u32 {
             0_u8 => {
-                println!(": int");
+                println!(": int {}", count);
                 let (number_in_b, num) = read_i64(r);
                 println!("{:<PADDING$}{} : {}", "INT", number_in_b, num);
+                count += 1;
             },
             // STRING
             1_u8 => {
-                println!(": string");
+                println!(": string {}", count);
                 let ( str_len_in_b, mut str_len) = read_u32(r);
                 let mut string = String::from("");
                 println!("{:<PADDING$}{}: {}", "STRING LEN", str_len_in_b, str_len);
@@ -235,6 +237,7 @@ fn read_const(r: &mut BufReader<File>, mut const_size: u32) {
                     string.push(char_u8 as char);
                 }
                 println!(": {}", string);
+                count += 1;
             },
             _ => panic!("Not implent const_type")
         }
@@ -277,8 +280,32 @@ fn read_instruction(r: &mut BufReader<File>, mut code_size: u32) {
         let ( ins , number ) = read_u32(r);
         let opcode = extract_opcode(number).unwrap();
         let ins_count = format!("{} {}", "INS", count);
-        println!("{:<PADDING$}{}: {:?}", ins_count, ins, opcode);
+        let arg = print_arg_ins(number, opcode);
+        println!("{:<PADDING$}{}: {:?} {}", ins_count, ins, opcode, arg);
         code_size -= 1;
         count += 1;
     }
+}
+
+
+fn print_arg_ins(ins: u32, op: OpCode) -> String {
+    let params = op.decode_with_num(ins);
+    let mut str = String::new();
+
+    for param in params {
+        match param {
+            OperandWithNum::RegAddr(num) => {
+                str.push('r');
+                str.push_str(&num.to_string());
+                str.push(' ');
+            }
+            OperandWithNum::ConstIdx(num) => {
+                str.push('c');
+                str.push_str(&num.to_string());
+                str.push(' ');
+            }
+        }
+    }
+
+    str
 }

@@ -12,6 +12,10 @@ impl Table {
         let result = self.child.get(vec![key]);
         result.map(|v| T::from_value(v).ok())?
     }
+
+    pub fn get_value(&self, key: &str) -> Option<Value> {
+        self.child.get(vec![key])
+    }
 }
 
 impl FromValue for Table {

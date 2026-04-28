@@ -1,6 +1,9 @@
 use std::{collections::HashMap, fmt::{self, Debug}};
 
-#[derive(Clone)]
+use serde::Serialize;
+
+#[derive(Clone, Serialize)]
+#[serde(untagged)]
 pub enum Tree<T> {
     Leaf(Option<T>),
     Branchs(HashMap<String, Tree<T>>),
@@ -8,7 +11,7 @@ pub enum Tree<T> {
 
 impl<T> Tree<T>
 where
-    T: Clone + Debug,
+    T: Clone + Debug + Serialize
 {
     pub fn new() -> Self {
         Tree::default()
@@ -115,6 +118,14 @@ where
                 )
             }
         }
+    }
+
+    pub fn to_json_pretty(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string_pretty(self)
+    }
+
+    pub fn to_json_compact(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string(self)
     }
 }
 

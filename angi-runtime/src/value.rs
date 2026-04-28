@@ -8,14 +8,18 @@ pub use function::Arg;
 pub use function::Function;
 
 use crate::error::VmError;
+use crate::vm::VM;
+use serde::Serialize;
 use std::fmt;
 
 use super::tree::Tree;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
 pub enum Value {
     Int(i64),
     String(String),
+    Bool(bool),
     Table(Box<Tree<Value>>),
     List(Vec<Value>),
     Thunk(u32),
@@ -32,6 +36,7 @@ impl Clone for Value {
             Self::Thunk(arg0) => Self::Thunk(*arg0),
             Self::Function(arg0) => Self::Function(*arg0),
             Self::List(arg0) => Self::List(arg0.clone()),
+            Self::Bool(b) => Self::Bool(*b),
             Self::None => Self::None,
         }
     }
@@ -46,6 +51,7 @@ impl fmt::Display for Value {
             Value::List(list) => write!(f, "List: {:?}", list),
             Value::Thunk(thunk) => write!(f, "Thunk ({:?})", thunk),
             Value::Function(func) => write!(f, "Function({:?})", func),
+            Value::Bool(b) => write!(f, "Bool({:?})", b),
             Value::None => write!(f, "None"),
         }
     }
@@ -69,9 +75,20 @@ impl Value {
     pub fn from_raw<T>(raw: T) -> Value where T: ToValue {
         raw.to_value()
     }
+
+    pub fn resolve_thunk(&mut self, vm: &mut VM) -> Result<(), VmError> {
+        if let Value::Thunk(thunk_idx) = self {
+            *self = vm.eval_thunk(*thunk_idx)?;
+        };
+        Ok(())
+    }
 }
 
-
+impl ToValue for Value {
+    fn to_value(self) -> Value {
+        self
+    }
+}
 
 pub trait FromValue: Sized + Clone {
     fn from_value(v: Value) -> Result<Self, VmError>;

@@ -8,6 +8,6 @@ members = [
   "angi-utils",
   "angi-archive",
   "angi-runtime",
-  "angi-repl"]
+  "angi-repl", "angi-modules/database"]
 
 default-members = [ "angi-compiler" ]

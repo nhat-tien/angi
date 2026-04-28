@@ -1,16 +1,19 @@
 mod constant;
 mod function;
-mod thunk;
 mod load_global;
+mod thunk;
 
-pub use load_global::load_global;
 use crate::compiler::ast::InterpolatedPart;
+pub use load_global::load_global;
 
-use super::{ast::{Expr, Operator}, error::BytecodeGenerationError};
+use super::{
+    ast::{Expr, Operator},
+    error::BytecodeGenerationError,
+};
+use angi_ins::{MAGIC_NUMBER, METADATA_BYTES, OpCode, VERSION};
 use constant::Constant;
 use core::panic;
 use function::Function;
-use angi_ins::{MAGIC_NUMBER, METADATA_BYTES, OpCode, VERSION};
 use std::{collections::HashMap, vec};
 use thunk::Thunk;
 
@@ -21,6 +24,8 @@ pub struct BytecodeGen {
     pub constants: HashMap<Constant, usize>,
     pub thunks: Vec<Thunk>,
     pub functions: Vec<Function>,
+    pub thunk_pointer: usize,
+    pub function_pointer: usize,
     pub global_functions: HashMap<String, Function>,
     pub global_function_in_used: HashMap<String, usize>,
     pub ins_count: u32,
@@ -30,12 +35,13 @@ pub struct BytecodeGen {
 }
 
 impl BytecodeGen {
-
     pub fn new() -> Self {
         BytecodeGen {
             constants: HashMap::new(),
             thunks: vec![],
             functions: vec![],
+            thunk_pointer: 0,
+            function_pointer: 0,
             global_functions: HashMap::new(),
             global_function_in_used: HashMap::new(),
             ins_count: 0,
@@ -50,16 +56,17 @@ impl BytecodeGen {
         self
     }
 
-    pub fn get_binary(&mut self, expr: Expr) ->
-    Result<Vec<u8>, BytecodeGenerationError>
-    {
+    pub fn get_binary(&mut self, expr: Expr) -> Result<Vec<u8>, BytecodeGenerationError> {
         let reg = self.visit_expr(&expr, false)?;
 
         self.free_register(reg as usize);
         self.emit_ins(OpCode::RETURN.encode(vec![reg as u32]));
 
-        self.visit_remain_thunk()?;
-        self.visit_function()?;
+        while self.thunk_pointer < self.thunks.len() ||
+                self.function_pointer < self.functions.len() {
+            self.visit_function()?;
+            self.visit_remain_thunk()?;
+        }
 
         let mut bytes = vec![];
         self.add_header_to_binary(&mut bytes);
@@ -73,7 +80,11 @@ impl BytecodeGen {
         Ok(bytes)
     }
 
-    pub fn visit_expr(&mut self, expr: &Expr, is_make_thunk: bool) -> Result<u8, BytecodeGenerationError>{
+    pub fn visit_expr(
+        &mut self,
+        expr: &Expr,
+        is_make_thunk: bool,
+    ) -> Result<u8, BytecodeGenerationError> {
         match expr {
             Expr::Number(num) => {
                 let idx_const = self.make_const(Constant::Number(*num));
@@ -86,8 +97,7 @@ impl BytecodeGen {
                 ]));
                 Ok(reg_value)
             }
-            Expr::LiteralString(str)
-            | Expr::LiteralStringMultiline(str) => {
+            Expr::LiteralString(str) | Expr::LiteralStringMultiline(str) => {
                 let idx_const = self.make_const(Constant::String(str.to_string()));
                 let reg_value = self
                     .get_register()
@@ -129,7 +139,7 @@ impl BytecodeGen {
                 let reg_value = self.get_variable_from_context(name);
                 match reg_value {
                     Some(reg) => Ok(reg),
-                    None => Err(BytecodeGenerationError::NotFoundVariable {  }),
+                    None => Err(BytecodeGenerationError::NotFoundVariable {}),
                 }
             }
             Expr::Table { .. } => {
@@ -182,7 +192,7 @@ impl BytecodeGen {
 
                     if !self.global_function_in_used.contains_key(name) {
                         let idx_func =
-                        self.make_function(function.body.clone(), function.params.clone());
+                            self.make_function(function.body.clone(), function.params.clone());
 
                         self.global_function_in_used.insert(name.clone(), idx_func);
                     }
@@ -204,35 +214,32 @@ impl BytecodeGen {
                         self.free_register(*reg_arg as usize);
                     }
 
-                    let reg_func_name =
-                        self.get_register().expect("Error in get register: function name");
+                    let reg_func_name = self
+                        .get_register()
+                        .expect("Error in get register: function name");
 
                     let idx_reg_func_name = self.make_const(Constant::String(name.clone()));
 
-                    self.emit_ins(
-                        OpCode::LOADCONST.encode(vec![
+                    self.emit_ins(OpCode::LOADCONST.encode(vec![
                             reg_func_name as u32,
                             idx_reg_func_name
                                 .try_into()
                                 .expect("Error when convert idx_const to u32"),
-                        ]),
-                    );
+                        ]));
 
-                    let reg_dist_result =
-                        self.get_register().expect("Error in get register: dist result");
+                    let reg_dist_result = self
+                        .get_register()
+                        .expect("Error in get register: dist result");
 
                     self.emit_ins(
-                        OpCode::CALL.encode(vec![
-                            reg_dist_result as u32,
-                            reg_func_name as u32,
-                        ]),
+                        OpCode::CALL.encode(vec![reg_dist_result as u32, reg_func_name as u32]),
                     );
 
                     self.free_register(reg_func_name as usize);
                     self.free_register(reg_dist_result as usize);
                     Ok(reg_dist_result)
                 } else {
-                    Err(BytecodeGenerationError::NotFoundFunction {  })
+                    Err(BytecodeGenerationError::NotFoundFunction {})
                 }
             }
             Expr::LetIn { let_part, in_part } => {
@@ -240,7 +247,7 @@ impl BytecodeGen {
                 for (k, v) in let_part {
                     let value_reg = &self.visit_expr(v, false)?;
                     self.insert_variable_in_current_context(k.to_string(), *value_reg);
-                };
+                }
                 let reg_in_part = &self.visit_expr(in_part, false)?;
                 Ok(*reg_in_part)
             }
@@ -249,39 +256,73 @@ impl BytecodeGen {
                     .get_register()
                     .expect("Error in get register: the value");
 
-                for part in parts {
-                    match part {
-                        InterpolatedPart::String(str) => {
-                            let idx_const = self.make_const(Constant::String(str.clone()));
+                if let Some(InterpolatedPart::String(str_first)) = parts.first() {
+                    let idx_const = self.make_const(Constant::String(str_first.clone()));
 
-                            let reg_const = self
-                                .get_register()
-                                .expect("Error in get register: the value");
+                    self.emit_ins(OpCode::LOADCONST.encode(vec![
+                                reg_value as u32,
+                                idx_const.try_into().expect("Error when convert idx_const to u32"),
+                            ]));
 
-                            self.emit_ins(OpCode::LOADCONST.encode(vec![
+                    for part in &parts[1..] {
+                        match part {
+                            InterpolatedPart::String(str) => {
+                                let idx_const = self.make_const(Constant::String(str.clone()));
+
+                                let reg_const = self
+                                    .get_register()
+                                    .expect("Error in get register: the value");
+
+                                self.emit_ins(OpCode::LOADCONST.encode(vec![
                                 reg_const as u32,
                                 idx_const.try_into().expect("Error when convert idx_const to u32"),
                             ]));
 
-                            self.emit_ins(OpCode::CONCAT.encode(vec![
-                                reg_value as u32,
-                                reg_value as u32,
-                                reg_const as u32,
-                            ]));
+                                self.emit_ins(OpCode::CONCAT.encode(vec![
+                                    reg_value as u32,
+                                    reg_value as u32,
+                                    reg_const as u32,
+                                ]));
 
-                            self.free_register(reg_const as usize);
-                        }
-                        InterpolatedPart::Expr(expr) => {
-                            let reg_interpolation = &self.visit_expr(expr, true)?;
+                                self.free_register(reg_const as usize);
+                            }
+                            InterpolatedPart::Expr(expr) => {
+                                let reg_interpolation = &self.visit_expr(expr, true)?;
 
-                            self.emit_ins(OpCode::CONCAT.encode(vec![
-                                reg_value as u32,
-                                reg_value as u32,
-                                *reg_interpolation as u32,
-                            ]));
+                                self.emit_ins(OpCode::CONCAT.encode(vec![
+                                    reg_value as u32,
+                                    reg_value as u32,
+                                    *reg_interpolation as u32,
+                                ]));
+
+                                self.free_register(*reg_interpolation as usize);
+                            }
                         }
                     }
-                };
+                }
+                Ok(reg_value)
+            }
+            Expr::AccessField { parent, child } => {
+                let reg_parent = self.visit_expr(parent, false)?;
+                let idx_const = self.make_const(Constant::String(child.clone()));
+                let reg_const = self
+                    .get_register()
+                    .expect("Error in get register: the value");
+
+
+                self.emit_ins(OpCode::LOADCONST.encode(vec![
+                    reg_const as u32,
+                    idx_const.try_into().expect("Error when convert idx_const to u32"),
+                ]));
+
+                let reg_value = self
+                    .get_register()
+                    .expect("Error in get register: the value");
+
+                self.emit_ins(OpCode::GETFIELD.encode(vec![reg_value as u32, reg_parent as u32, reg_const as u32]));
+                self.free_register(reg_parent as usize);
+                self.free_register(reg_const as usize);
+
                 Ok(reg_value)
             }
             expr => panic!("Error: emit_expr, not implement yet {:?}", expr),
@@ -318,11 +359,13 @@ impl BytecodeGen {
             self.free_register(reg_table as usize);
             Ok(reg_table)
         } else {
-            Err(BytecodeGenerationError::UnexpectExpr { message: "Expect Table".into() })
+            Err(BytecodeGenerationError::UnexpectExpr {
+                message: "Expect Table".into(),
+            })
         }
     }
 
-    fn visit_list(&mut self, expr: Expr) -> Result<u8, BytecodeGenerationError>{
+    fn visit_list(&mut self, expr: Expr) -> Result<u8, BytecodeGenerationError> {
         if let Expr::List { items } = expr {
             let reg_list = self.get_register().expect("Error in get register: list");
             self.emit_ins(OpCode::MAKELIST.encode(vec![reg_list as u32]));
@@ -338,15 +381,16 @@ impl BytecodeGen {
             self.free_register(reg_list as usize);
             Ok(reg_list)
         } else {
-            Err(BytecodeGenerationError::UnexpectExpr { message: "Expect List".into() })
+            Err(BytecodeGenerationError::UnexpectExpr {
+                message: "Expect List".into(),
+            })
         }
     }
 
     fn visit_function(&mut self) -> Result<(), BytecodeGenerationError> {
-        let mut idx = 0;
-        while idx < self.functions.len() {
-            self.set_offset_func(idx, self.ins_count);
-            let function = self.functions[idx].clone();
+        while self.function_pointer < self.functions.len() {
+            self.set_offset_func(self.function_pointer, self.ins_count);
+            let function = self.functions[self.function_pointer].clone();
             let mut reg_params: Vec<usize> = vec![];
 
             self.new_frame_in_context();
@@ -364,7 +408,7 @@ impl BytecodeGen {
                 reg_params.push(reg_param as usize);
             }
 
-            let reg_value = self.visit_expr(&function.body,false)?;
+            let reg_value = self.visit_expr(&function.body, false)?;
 
             self.free_registers(reg_params);
             self.emit_ins(OpCode::RETURN.encode(vec![reg_value as u32]));
@@ -372,7 +416,7 @@ impl BytecodeGen {
             // self.context_var.clear();
             self.clear_bottom_context();
 
-            idx += 1;
+            self.function_pointer += 1;
         }
         Ok(())
     }
@@ -402,7 +446,8 @@ impl BytecodeGen {
         let thunk_offset = const_len_in_bytes + METADATA_BYTES;
         let function_offset = thunk_offset + (self.thunks.len() as u32 * 4);
         let global_func_table_offset = function_offset + (self.functions.len() as u32 * 8);
-        let code_offset = global_func_table_offset + (self.global_function_in_used.len() as u32 * 8);
+        let code_offset =
+            global_func_table_offset + (self.global_function_in_used.len() as u32 * 8);
 
         bytes.extend_from_slice(&MAGIC_NUMBER.to_be_bytes());
         bytes.extend_from_slice(&VERSION.to_be_bytes());
@@ -464,9 +509,9 @@ impl BytecodeGen {
         bytes.extend_from_slice(&total_byte.to_be_bytes());
     }
 
-    pub fn visit_remain_thunk(&mut self) -> Result<(), BytecodeGenerationError>{
-        let mut idx = 0;
-        while idx < self.thunks.len() {
+    pub fn visit_remain_thunk(&mut self) -> Result<(), BytecodeGenerationError> {
+        while self.thunk_pointer < self.thunks.len() {
+            let idx = self.thunk_pointer;
             match self.thunks[idx].expr {
                 Expr::Table { .. } => {
                     self.set_offset_thunk(idx, self.ins_count);
@@ -480,7 +525,7 @@ impl BytecodeGen {
                 }
                 _ => panic!("Not Impliment Yet"),
             }
-            idx += 1;
+            self.thunk_pointer += 1;
         }
         Ok(())
     }
@@ -565,7 +610,6 @@ impl BytecodeGen {
         const_len
     }
 
-
     fn insert_variable_in_current_context(&mut self, name: String, reg: u8) {
         if let Some(last) = self.context_var.last_mut() {
             last.insert(name, reg);
@@ -576,9 +620,9 @@ impl BytecodeGen {
         for context_frame in self.context_var.iter().rev() {
             match context_frame.get(name) {
                 Some(var) => return Some(*var),
-                None => continue
+                None => continue,
             }
-        };
+        }
 
         None
     }

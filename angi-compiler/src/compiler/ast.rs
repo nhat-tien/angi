@@ -38,7 +38,11 @@ pub enum Expr {
         args: Vec<Expr>
     },
     Var(String),
-    InterpolatedString(Vec<InterpolatedPart>)
+    InterpolatedString(Vec<InterpolatedPart>),
+    AccessField {
+        parent: Box<Expr>,
+        child: String
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

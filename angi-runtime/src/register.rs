@@ -42,6 +42,7 @@ impl Register {
 
     pub fn set_new_table(&mut self, idx: usize) {
         self.regs[idx] = Value::Table(Box::new(Tree::new()));
+        // self.regs[idx] = Value::Table(HashMap::new());
     }
 
     pub fn set_attr_table(&mut self, idx: usize, key: String, value: Value) {

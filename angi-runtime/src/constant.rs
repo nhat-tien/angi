@@ -1,6 +1,6 @@
 use crate::{error::VmError, value::Value};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ConstantValue {
     Int(i64),
     String(String),

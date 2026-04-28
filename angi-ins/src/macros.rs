@@ -83,6 +83,28 @@ macro_rules! define_opcodes {
 
                 result
             }
+
+            pub fn decode_with_num(&self, byte: u32) -> Vec<OperandWithNum> {
+                let mut offset_bit_from_right = 0;
+                let mut result = vec![];
+
+                for operand in self.layout().iter().rev() {
+                     match operand {
+                         Operand::RegAddr => {
+                             let number = ((byte >> offset_bit_from_right) & REG_MASK);
+                             result.insert(0, OperandWithNum::RegAddr(number));
+                             offset_bit_from_right += REG_BITS;
+                         }
+                         Operand::ConstIdx => {
+                             let number = ((byte >> offset_bit_from_right) & CONST_MASK);
+                             result.insert(0, OperandWithNum::ConstIdx(number));
+                             offset_bit_from_right += CONST_BITS;
+                         }
+                     }
+                }
+
+                result
+            }
         }
 
     };
