@@ -125,6 +125,12 @@ impl<'a> Lexer<'a>
         self.chr2 = next_char;
     }
 
+    fn move_next_char_until_newline(&mut self) {
+        while self.chr1 != Some('\n') {
+            self.move_next_char();
+        }
+    }
+
     fn get_pos(&self) -> u32 {
         self.current_pos
     }
@@ -370,7 +376,11 @@ impl<'a> Lexer<'a>
                 self.emit_one_character(Token::Star);
             }
             '/' => {
-                self.emit_one_character(Token::Slash);
+                if self.chr1 == Some('/') {
+                    self.move_next_char_until_newline();
+                } else {
+                    self.emit_one_character(Token::Slash);
+                }
             }
             '%' => {
                 self.emit_one_character(Token::Percent);

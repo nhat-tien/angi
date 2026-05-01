@@ -2,23 +2,26 @@
     port = 4000 - 20;
     routes = [
        {
+           method = "GET";
            path = "/";
            handler = () => html("<h1>Hello</h1>");
        },
        {
+           method = "GET";
            path = "/hello";
            handler = () => htmlTemplate("./index.html");
        },
-       {
-           path = "/json-test";
-           handler = () => json({
-               name = "Tien";
-               message = "Hello";
-           });
-       }
+//       {
+//           method = "GET";
+//           path = "/json-test/{name}";
+//           handler = (req) => json({
+//               name = req;
+//               message = "Hello";
+//           });
+//       }
     ];
-    static = {
-      prefix = "/assets";
-      dir = "./assets";
-    };
+//    static = {
+//      prefix = "/assets";
+//      dir = "./assets";
+//    };
 }

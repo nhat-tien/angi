@@ -83,7 +83,7 @@ fn insert_json(
     }
 }
 
-pub fn make_vm_handler(  method: &str,function: Function, avm: VM) -> axum::routing::MethodRouter {
+pub fn make_vm_handler(method: &str, function: Function, avm: VM) -> axum::routing::MethodRouter {
     let handler = move |
         Path(path): Path<HashMap<String, String>>,
         Query(query): Query<HashMap<String, String>>,

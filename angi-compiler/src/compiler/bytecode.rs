@@ -137,9 +137,10 @@ impl BytecodeGen {
             }
             Expr::Var(name) => {
                 let reg_value = self.get_variable_from_context(name);
+                println!("{:?}", self.context_var);
                 match reg_value {
                     Some(reg) => Ok(reg),
-                    None => Err(BytecodeGenerationError::NotFoundVariable {}),
+                    None => Err(BytecodeGenerationError::NotFoundVariable { message: name.into() }),
                 }
             }
             Expr::Table { .. } => {
@@ -388,6 +389,7 @@ impl BytecodeGen {
     }
 
     fn visit_function(&mut self) -> Result<(), BytecodeGenerationError> {
+        println!("visit_function {:?}", self.functions);
         while self.function_pointer < self.functions.len() {
             self.set_offset_func(self.function_pointer, self.ins_count);
             let function = self.functions[self.function_pointer].clone();
@@ -400,6 +402,7 @@ impl BytecodeGen {
             // }
 
             for param in function.params {
+                println!("params {:?}", param);
                 let reg_param = self
                     .get_register()
                     .expect("Error in get register: params function");
@@ -407,8 +410,9 @@ impl BytecodeGen {
                 self.emit_ins(OpCode::LOADARG.encode(vec![reg_param as u32]));
                 reg_params.push(reg_param as usize);
             }
-
+            println!("before");
             let reg_value = self.visit_expr(&function.body, false)?;
+            println!("after");
 
             self.free_registers(reg_params);
             self.emit_ins(OpCode::RETURN.encode(vec![reg_value as u32]));
@@ -612,6 +616,7 @@ impl BytecodeGen {
 
     fn insert_variable_in_current_context(&mut self, name: String, reg: u8) {
         if let Some(last) = self.context_var.last_mut() {
+            println!("insert success {}", name);
             last.insert(name, reg);
         }
     }
@@ -632,6 +637,7 @@ impl BytecodeGen {
     }
 
     fn clear_bottom_context(&mut self) {
+
         self.context_var.pop();
     }
 }
