@@ -1,16 +1,22 @@
 {
     port = 4000 - 20;
-    routes = [
-       {
-           method = "GET";
-           path = "/";
-           handler = () => html("<h1>Hello</h1>");
-       },
-       {
-           method = "GET";
-           path = "/hello";
-           handler = () => htmlTemplate("./index.html");
-       },
+    test = (req) => { name = "Hello"; }
+    |> hello()
+    |> wrapper(req);
+//    routes = [
+//       {
+//           method = "GET";
+//           path = "/product/{name}";
+//           handler = () =>
+//              sqlQuery("SELECT * FROM product p where p.name", name)
+//              |> view("./view/product")
+//           ;
+//       },
+//       {
+//           method = "GET";
+//           path = "/hello";
+//           handler = () => htmlTemplate("./index.html");
+//       },
 //       {
 //           method = "GET";
 //           path = "/json-test/{name}";
@@ -19,7 +25,7 @@
 //               message = "Hello";
 //           });
 //       }
-    ];
+//    ];
 //    static = {
 //      prefix = "/assets";
 //      dir = "./assets";

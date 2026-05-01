@@ -2,12 +2,12 @@
 resolver = "3"
 members = [
   "angi-compiler",
-  "angi-modules/template",
+  "angi-modules",
   "angi-ins",
   "angi-server",
   "angi-utils",
   "angi-archive",
   "angi-runtime",
-  "angi-repl", "angi-modules/database"]
+  "angi-repl"]
 
 default-members = [ "angi-compiler" ]

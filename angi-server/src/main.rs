@@ -105,7 +105,7 @@ fn build_router(mut vm: VM) -> Result<Router, VmError> {
         // let result: Table = function.call(&mut ready_vm, ()).unwrap();
 
         // let type_of_handler = result.get::<String>("type").unwrap();
-        println!("Hello");
+
         router.route(&path, make_vm_handler(&method, function, vm.clone()))
 
         // match type_of_handler.as_str() {

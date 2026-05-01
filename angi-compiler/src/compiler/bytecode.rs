@@ -32,6 +32,8 @@ pub struct BytecodeGen {
     pub register_in_used: [bool; 16],
     pub ins_code: Vec<u8>,
     context_var: Vec<EnvironmentVariableFrame>,
+
+    is_in_func: bool
 }
 
 impl BytecodeGen {
@@ -48,6 +50,7 @@ impl BytecodeGen {
             register_in_used: [false; 16],
             ins_code: vec![],
             context_var: vec![],
+            is_in_func: false
         }
     }
 
@@ -137,14 +140,13 @@ impl BytecodeGen {
             }
             Expr::Var(name) => {
                 let reg_value = self.get_variable_from_context(name);
-                println!("{:?}", self.context_var);
                 match reg_value {
                     Some(reg) => Ok(reg),
                     None => Err(BytecodeGenerationError::NotFoundVariable { message: name.into() }),
                 }
             }
             Expr::Table { .. } => {
-                if is_make_thunk {
+                if is_make_thunk && !self.is_in_func {
                     let idx_thunk = self.make_thunk(expr.clone());
                     let reg_value = self
                         .get_register()
@@ -159,7 +161,7 @@ impl BytecodeGen {
                 }
             }
             Expr::List { .. } => {
-                if is_make_thunk {
+                if is_make_thunk && !self.is_in_func {
                     let idx_thunk = self.make_thunk(expr.clone());
                     let reg_value = self
                         .get_register()
@@ -389,7 +391,6 @@ impl BytecodeGen {
     }
 
     fn visit_function(&mut self) -> Result<(), BytecodeGenerationError> {
-        println!("visit_function {:?}", self.functions);
         while self.function_pointer < self.functions.len() {
             self.set_offset_func(self.function_pointer, self.ins_count);
             let function = self.functions[self.function_pointer].clone();
@@ -402,7 +403,6 @@ impl BytecodeGen {
             // }
 
             for param in function.params {
-                println!("params {:?}", param);
                 let reg_param = self
                     .get_register()
                     .expect("Error in get register: params function");
@@ -410,14 +410,16 @@ impl BytecodeGen {
                 self.emit_ins(OpCode::LOADARG.encode(vec![reg_param as u32]));
                 reg_params.push(reg_param as usize);
             }
-            println!("before");
+
+            self.is_in_func = true;
+
             let reg_value = self.visit_expr(&function.body, false)?;
-            println!("after");
 
             self.free_registers(reg_params);
             self.emit_ins(OpCode::RETURN.encode(vec![reg_value as u32]));
             self.free_register(reg_value as usize);
             // self.context_var.clear();
+            self.is_in_func = false;
             self.clear_bottom_context();
 
             self.function_pointer += 1;
@@ -616,7 +618,6 @@ impl BytecodeGen {
 
     fn insert_variable_in_current_context(&mut self, name: String, reg: u8) {
         if let Some(last) = self.context_var.last_mut() {
-            println!("insert success {}", name);
             last.insert(name, reg);
         }
     }

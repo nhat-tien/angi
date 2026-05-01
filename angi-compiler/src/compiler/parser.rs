@@ -161,6 +161,31 @@ fn expr_with_bp(
     // if lhs is (var1) then this check the following token it is => or not
     //
 
+    skip_new_line(lexer);
+
+    if let Some(Ok((_, Token::Dot, (_, _)))) = lexer.peek() {
+        lexer.next();
+        lhs = match expr_member_access(lexer, engine, lhs) {
+            Some(expr) => expr,
+            None => {
+                report_error(engine, 0, 0, "Somthing wrong in member access".to_string());
+                return None;
+            }
+        }
+    };
+
+    if let Some(Ok((_, Token::Pipe, (_, _)))) = lexer.peek() {
+        lexer.next();
+        lhs = match expr_pipe(lexer, engine, lhs) {
+            Some(expr) => expr,
+            None => {
+                report_error(engine, 0, 0, "Somthing wrong in pipeline".to_string());
+                return None;
+            }
+        }
+    }
+
+
     loop {
         let op = match lexer.peek() {
             Some(Ok((_, Token::EndOfFile, (_, _)))) => break,
@@ -172,18 +197,11 @@ fn expr_with_bp(
             Some(Ok((_, Token::Comma, (_, _)))) => break,
             Some(Ok((_, Token::RightBracket, (_, _)))) => break,
             Some(Ok((_, Token::EqualRightArrow, (_, _)))) => break,
-            Some(Ok((_, Token::Pipe, (_, _)))) => {
-                return expr_pipe(lhs, lexer, engine);
-            },
             Some(Ok((_, Token::Plus, (_, _)))) => Operator::Add,
             Some(Ok((_, Token::Dash, (_, _)))) => Operator::Sub,
             Some(Ok((_, Token::Star, (_, _)))) => Operator::Mul,
             Some(Ok((_, Token::Slash, (_, _)))) => Operator::Div,
             Some(Ok((_, Token::DoubleDot, (_, _)))) => Operator::ConcatString,
-            Some(Ok((_, Token::Dot, (_, _)))) => {
-                lexer.next();
-                return expr_member_access(lexer, engine, lhs);
-            },
             Some(Ok((line, tok, (col, _)))) => {
                 report_error(engine, *line, *col, format!("Expect Operator, found {:?}", tok));
                 return None;
@@ -542,9 +560,38 @@ fn expr_interpolated_str(lexer: &mut Peekable<&mut Lexer>, engine: &mut Diagnost
     Some(Expr::InterpolatedString(parts))
 }
 
-#[allow(unused)]
-fn expr_pipe(lhs: Expr, lexer: &mut Peekable<&mut Lexer>, engine: &mut DiagnosticEngine) -> Option<Expr> {
-    todo!()
+fn expr_pipe(lexer: &mut Peekable<&mut Lexer>, engine: &mut DiagnosticEngine, lhs: Expr) -> Option<Expr> {
+    let mut new_lhs = match expr_with_bp(lexer, engine, 0) {
+        Some(Expr::FunctionCall { name, args }) => Expr::Pipe { lhs: Box::new(lhs), rhs: Box::new(Expr::FunctionCall { name, args }) },
+            Some(expr) => {
+                println!("hello {:?}", expr);
+                return None;
+            }
+        _ => {
+            report_error(engine, 0, 0, "Expected function call, found nothing".into());
+            return None;
+        }
+    };
+
+    skip_new_line(lexer);
+
+    while let Some(Ok((_, Token::Pipe, _))) = lexer.peek() {
+        lexer.next();
+        new_lhs = match expr_with_bp(lexer, engine, 0) {
+            Some(Expr::FunctionCall { name, args }) => Expr::Pipe { lhs: Box::new(new_lhs), rhs: Box::new(Expr::FunctionCall { name, args }) },
+            Some(expr) => {
+                println!("{:?}", expr);
+                return None;
+            }
+            _ => {
+
+                report_error(engine, 0, 0, "Expected function call, found nothing".into());
+                return None;
+            }
+        };
+    }
+
+    Some(new_lhs)
 }
 
 

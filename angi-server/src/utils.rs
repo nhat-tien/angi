@@ -14,7 +14,6 @@ fn build_request_value(
     let mut root = Tree::new();
 
     for (k, v) in path {
-        println!("{}", k);
         root.insert(vec!["path", &k], Value::String(v)).unwrap();
     }
 
@@ -111,8 +110,6 @@ pub fn make_vm_handler(method: &str, function: Function, avm: VM) -> axum::routi
             );
 
             let result = function.call::<Table, _>(&mut vm, (input,));
-
-            println!("{:?}", result);
 
             match result {
                 Ok(val) => table_to_response(val, vm.clone()),
