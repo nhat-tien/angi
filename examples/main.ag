@@ -11,22 +11,26 @@ in
 
     routes = [
        {
+           method = "GET";
            path = "/";
            handler = () => html("<h1>Hello</h1>");
-       }
+       },
+       {
+           method = "GET";
+           path = "/hello";
+           handler = () => htmlTemplate("./index.html");
+       },
+//       {
+//           method = "GET";
+//           path = "/json-test/{name}";
+//           handler = (req) => json({
+//               name = req;
+//               message = "Hello";
+//           });
+//       }
     ];
-
-
-    middleware = [
-       () => {},
-       () => {},
-       () => {},
-       () => {},
-       () => {},
-       () => {},
-       () => {},
-    ];
-
-
-
+//    static = {
+//      prefix = "/assets";
+//      dir = "./assets";
+//    };
 }

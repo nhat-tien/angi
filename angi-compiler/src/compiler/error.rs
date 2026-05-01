@@ -32,7 +32,9 @@ pub enum BytecodeGenerationError {
     UnexpectExpr {
         message: String
     },
-    NotFoundVariable {},
+    NotFoundVariable {
+        message: String
+    },
     NotFoundFunction {}
 }
 

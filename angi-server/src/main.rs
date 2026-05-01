@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 mod logger;
+mod utils;
 
 use axum::extract::Path;
 use axum::http::{header, StatusCode};

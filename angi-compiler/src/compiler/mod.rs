@@ -41,8 +41,8 @@ pub fn compile(src: &str, filename: &str) -> Result<Vec<u8>, CompilationError> {
                 BytecodeGenerationError::UnexpectExpr { message } => {
                     (format!("Unexpected expression: {}", message), None)
                 }
-                BytecodeGenerationError::NotFoundVariable {} => {
-                    ("Variable not found in current scope".to_string(),
+                BytecodeGenerationError::NotFoundVariable { message } => {
+                    (format!("Variable '{}' not found in current scope", message),
                      Some("Make sure the variable is defined before use".to_string()))
                 }
                 BytecodeGenerationError::NotFoundFunction {} => {
@@ -102,8 +102,8 @@ pub fn compile_and_type_checking(src: &str, filename: &str) -> Result<Vec<u8>, C
                 BytecodeGenerationError::UnexpectExpr { message } => {
                     (format!("Unexpected expression: {}", message), None)
                 }
-                BytecodeGenerationError::NotFoundVariable {} => {
-                    ("Variable not found in current scope".to_string(),
+                BytecodeGenerationError::NotFoundVariable { message } => {
+                    (format!("Variable '{}' not found in current scope", message),
                      Some("Make sure the variable is defined before use".to_string()))
                 }
                 BytecodeGenerationError::NotFoundFunction {} => {
