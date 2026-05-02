@@ -2,7 +2,6 @@
 resolver = "3"
 members = [
   "angi-compiler",
-  "angi-modules",
   "angi-ins",
   "angi-server",
   "angi-utils",

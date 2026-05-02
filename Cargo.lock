@@ -42,14 +42,6 @@ name = "angi-ins"
 version = "0.1.0"
 
 [[package]]
-name = "angi-modules"
-version = "0.1.0"
-dependencies = [
- "minijinja",
- "rusqlite",
-]
-
-[[package]]
 name = "angi-repl"
 version = "0.1.0"
 dependencies = [
@@ -64,6 +56,8 @@ dependencies = [
  "angi-archive",
  "angi-ins",
  "angi-utils",
+ "minijinja",
+ "rusqlite",
  "serde",
  "serde_json",
 ]

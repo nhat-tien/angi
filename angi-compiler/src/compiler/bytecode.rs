@@ -4,6 +4,7 @@ mod load_global;
 mod thunk;
 
 use crate::compiler::ast::InterpolatedPart;
+use angi_runtime::modules::get_default_foreign_function;
 pub use load_global::load_global;
 
 use super::{
@@ -32,12 +33,15 @@ pub struct BytecodeGen {
     pub register_in_used: [bool; 16],
     pub ins_code: Vec<u8>,
     context_var: Vec<EnvironmentVariableFrame>,
+    foreign_fn_map: HashMap<String, u32>,
 
     is_in_func: bool
 }
 
 impl BytecodeGen {
     pub fn new() -> Self {
+        let registry = get_default_foreign_function();
+
         BytecodeGen {
             constants: HashMap::new(),
             thunks: vec![],
@@ -50,7 +54,8 @@ impl BytecodeGen {
             register_in_used: [false; 16],
             ins_code: vec![],
             context_var: vec![],
-            is_in_func: false
+            is_in_func: false,
+            foreign_fn_map: registry.name_to_idx_map()
         }
     }
 
@@ -126,6 +131,7 @@ impl BytecodeGen {
                     Operator::Div => OpCode::DIV,
                     Operator::Mul => OpCode::MUL,
                     Operator::ConcatString => OpCode::CONCAT,
+                    _ => panic!("panic because pipe")
                 };
 
                 self.emit_ins(opcode.encode(vec![
@@ -240,10 +246,42 @@ impl BytecodeGen {
 
                     self.free_register(reg_func_name as usize);
                     self.free_register(reg_dist_result as usize);
-                    Ok(reg_dist_result)
-                } else {
-                    Err(BytecodeGenerationError::NotFoundFunction {})
+                    return Ok(reg_dist_result)
                 }
+
+                if let Some(function_ref) = self.foreign_fn_map.get(name) {
+                    let r = *function_ref;
+
+                    // if args.len() != function.params.len() {
+                    //     panic!(
+                    //         "Function {} have {} params, but call it with {} arg",
+                    //         name,
+                    //         function.params.len(),
+                    //         args.len(),
+                    //     )
+                    // };
+
+                    for arg in args {
+                        let reg_arg = &self.visit_expr(arg, false)?;
+
+                        self.emit_ins(OpCode::PUSHARG.encode(vec![*reg_arg as u32]));
+
+                        self.free_register(*reg_arg as usize);
+                    }
+
+                    let reg_dist_result = self
+                        .get_register()
+                        .expect("Error in get register: dist result");
+
+                    self.emit_ins(
+                        OpCode::CFOREIGN.encode(vec![reg_dist_result as u32, r]),
+                    );
+
+                    self.free_register(reg_dist_result as usize);
+                    return Ok(reg_dist_result)
+                }
+
+                Err(BytecodeGenerationError::NotFoundFunction {})
             }
             Expr::LetIn { let_part, in_part } => {
                 self.new_frame_in_context();

@@ -21,6 +21,7 @@ use tower_http::services::ServeDir;
 
 use crate::utils::make_vm_handler;
 
+#[allow(dead_code)]
 type Avm = Arc<Mutex<VM>>;
 type ArcStore = Arc<StaticStore>;
 

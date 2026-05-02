@@ -2,6 +2,7 @@ use crate::constant::ConstantValue;
 use crate::error::VmError;
 use crate::function::Function;
 use crate::metadata::MetaData;
+use crate::modules::{FunctionRegistry, get_default_foreign_function};
 use crate::register::Register;
 use crate::value::{FromValue, ToArgValue, Value};
 use angi_archive::Extractor;
@@ -21,6 +22,7 @@ pub struct VM {
     global_function_table: HashMap<String, usize>,
     bytes: Vec<u8>,
     args_queue: VecDeque<Value>,
+    registry_func: FunctionRegistry
 }
 
 impl Default for VM {
@@ -34,6 +36,7 @@ impl Default for VM {
             bytes: vec![],
             metadata: MetaData::default(),
             args_queue: VecDeque::new(),
+            registry_func: get_default_foreign_function()
         }
     }
 }
@@ -49,6 +52,7 @@ impl Clone for VM {
             bytes: self.bytes.clone(),
             metadata: self.metadata,
             args_queue: VecDeque::new(),
+            registry_func: self.registry_func.clone()
         }
     }
 }
@@ -594,6 +598,13 @@ impl VM {
                         }
                     })?;
                     self.args_queue.push_back(value);
+                }
+                OpCode::CFOREIGN => {
+                    let params = OpCode::CFOREIGN.decode(ins);
+                    let result = self.registry_func.resolve(params[1] as u32, self.args_queue.clone().into()).map_err(|_| VmError::UnexpectedError {
+                            message: "Error in eval foreign function".into(),
+                        })?;
+                    self.registers.set(params[0] as usize, result);
                 }
                 OpCode::CALL => {
                     let params = OpCode::CALL.decode(ins);

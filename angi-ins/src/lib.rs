@@ -44,6 +44,7 @@ define_opcodes! {
     PUSHARG   = { code = 16, layout = [RegAddr] },                     // Push Arg
     CALL      = { code = 17, layout = [RegAddr,RegAddr] },             // Call Function
     GETFIELD  = { code = 18, layout = [RegAddr,RegAddr,RegAddr] },             // Call Function
+    CFOREIGN  = { code = 19, layout = [RegAddr,ConstIdx] },             // Call Function
 }
 
 pub fn extract_opcode(byte: u32) -> Option<OpCode> {

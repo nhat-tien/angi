@@ -57,7 +57,8 @@ pub enum Operator {
     Sub,
     Div,
     Mul,
-    ConcatString
+    ConcatString,
+    Pipe,
 }
 
 type Indentifier = String;

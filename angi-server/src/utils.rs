@@ -192,19 +192,19 @@ pub fn table_to_response(table: Table, mut vm: VM) -> Response {
         match type_of_handler.as_str() {
             "html" => {
                 let html = table.get::<String>("html").unwrap();
-                return (StatusCode::from_u16(200).unwrap(), Html(html)).into_response();
+                (StatusCode::from_u16(200).unwrap(), Html(html)).into_response()
             },
             "htmlTemplate" => {
                 let path_template = table.get::<String>("path").unwrap();
                 let html = std::fs::read_to_string(&path_template)
                 .unwrap_or_else(|_| "<h1>Template not found</h1>".to_string());
-                return (StatusCode::from_u16(200).unwrap(), Html(html)).into_response();
+                (StatusCode::from_u16(200).unwrap(), Html(html)).into_response()
 
             },
             "json" => {
                 let mut json = table.get_value("body").unwrap();
                 json.resolve_thunk(&mut vm).unwrap();
-                return (StatusCode::from_u16(200).unwrap(), Json(json)).into_response();
+                (StatusCode::from_u16(200).unwrap(), Json(json)).into_response()
             },
             _ => todo!()
         }

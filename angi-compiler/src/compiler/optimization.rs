@@ -45,6 +45,7 @@ fn calculate_expr(ast: &Expr) -> i32 {
                 Operator::Mul => lhs_num * rhs_num,
                 Operator::Div => lhs_num / rhs_num,
                 Operator::ConcatString => 0,
+                Operator::Pipe => 0,
             }
         }
         _ => 0,

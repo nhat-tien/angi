@@ -7,10 +7,7 @@ use crate::diagnostic::{Diagnostic, DiagnosticEngine, Severity, Span};
 use std::collections::HashMap;
 use std::iter::Peekable;
 
-pub fn parse_with_engine(
-    lex: &mut Lexer,
-    engine: &mut DiagnosticEngine
-) -> Option<Expr> {
+pub fn parse_with_engine(lex: &mut Lexer, engine: &mut DiagnosticEngine) -> Option<Expr> {
     let mut lexer = lex.peekable();
     skip_new_line(&mut lexer);
     expr_with_bp(&mut lexer, engine, 0)
@@ -86,7 +83,7 @@ fn expr_with_bp(
     engine: &mut DiagnosticEngine,
     min_pb: u8,
 ) -> Option<Expr> {
-     let mut lhs = match lexer.next() {
+    let mut lhs = match lexer.next() {
         Some(Ok((_, Token::Number(num), (_, _)))) => Expr::Number(num),
         Some(Ok((_, Token::String(str), (_, _)))) => Expr::LiteralString(str),
         Some(Ok((_, Token::MultilineString(str), (_, _)))) => Expr::LiteralStringMultiline(str),
@@ -96,22 +93,32 @@ fn expr_with_bp(
             Some(Ok((_, Token::RightParen, (_, _)))) => {
                 lexer.next();
                 expr_function(lexer, engine, vec![])?
-            },
+            }
             Some(Ok((_, Token::Name(_), (_, _)))) => {
                 let params = get_params_of_function(lexer, engine)?;
                 expr_function(lexer, engine, params)?
             }
             _ => {
-                let lhs = expr_with_bp(lexer, engine,  0)?;
+                let lhs = expr_with_bp(lexer, engine, 0)?;
 
                 match lexer.next() {
                     Some(Ok((_, Token::RightParen, (_, _)))) => lhs,
                     Some(Ok((line, tok, (col, _)))) => {
-                        report_error(engine, line, col, format!("Expected Token::RightParen, found {:?}", tok));
+                        report_error(
+                            engine,
+                            line,
+                            col,
+                            format!("Expected Token::RightParen, found {:?}", tok),
+                        );
                         return None;
-                    },
+                    }
                     _ => {
-                        report_error(engine, 0, 0, "Expected Token::RightParen, found end of life".to_string());
+                        report_error(
+                            engine,
+                            0,
+                            0,
+                            "Expected Token::RightParen, found end of life".to_string(),
+                        );
                         return None;
                     }
                 }
@@ -133,25 +140,26 @@ fn expr_with_bp(
                 rhs: Box::new(rhs),
             }
         }
-        Some(Ok((_, Token::Name(name), (_, _)))) => {
-            match lexer.peek() {
-                Some(Ok((_, Token::LeftParen, (_, _)))) => {
-                    lexer.next();
-                    expr_calle(lexer, engine, name)?
-                },
-                _ => {
-                    Expr::Var(name)
-                }
+        Some(Ok((_, Token::Name(name), (_, _)))) => match lexer.peek() {
+            Some(Ok((_, Token::LeftParen, (_, _)))) => {
+                lexer.next();
+                expr_calle(lexer, engine, name)?
             }
+            _ => Expr::Var(name),
         },
         Some(Ok((_, Token::LeftBrace, (_, _)))) => expr_table(lexer, engine)?,
         Some(Ok((_, Token::LeftBracket, (_, _)))) => expr_list(lexer, engine)?,
         Some(Ok((_, Token::Let, (_, _)))) => expr_let_in(lexer, engine)?,
         Some(Ok((_, Token::StringStart, (_, _)))) => expr_interpolated_str(lexer, engine)?,
         Some(Ok((line, tok, (col, _)))) => {
-            report_error(engine, line, col, format!("Expect an expression, found \"{}\"", tok.to_str_symbol()));
+            report_error(
+                engine,
+                line,
+                col,
+                format!("Expect an expression, found \"{}\"", tok.to_str_symbol()),
+            );
             return None;
-        },
+        }
         _ => {
             report_error(engine, 0, 0, "Bad token in parser".to_string());
             return None;
@@ -174,18 +182,6 @@ fn expr_with_bp(
         }
     };
 
-    if let Some(Ok((_, Token::Pipe, (_, _)))) = lexer.peek() {
-        lexer.next();
-        lhs = match expr_pipe(lexer, engine, lhs) {
-            Some(expr) => expr,
-            None => {
-                report_error(engine, 0, 0, "Somthing wrong in pipeline".to_string());
-                return None;
-            }
-        }
-    }
-
-
     loop {
         let op = match lexer.peek() {
             Some(Ok((_, Token::EndOfFile, (_, _)))) => break,
@@ -202,12 +198,23 @@ fn expr_with_bp(
             Some(Ok((_, Token::Star, (_, _)))) => Operator::Mul,
             Some(Ok((_, Token::Slash, (_, _)))) => Operator::Div,
             Some(Ok((_, Token::DoubleDot, (_, _)))) => Operator::ConcatString,
+            Some(Ok((_, Token::Pipe, (_, _)))) => Operator::Pipe,
             Some(Ok((line, tok, (col, _)))) => {
-                report_error(engine, *line, *col, format!("Expect Operator, found {:?}", tok));
+                report_error(
+                    engine,
+                    *line,
+                    *col,
+                    format!("Expect Operator, found {:?}", tok),
+                );
                 return None;
-            },
+            }
             _ => {
-                report_error(engine, 0, 0, "Bad token in parser, expect Operator".to_string());
+                report_error(
+                    engine,
+                    0,
+                    0,
+                    "Bad token in parser, expect Operator".to_string(),
+                );
                 return None;
             }
         };
@@ -218,19 +225,19 @@ fn expr_with_bp(
         }
         lexer.next();
         let rhs = expr_with_bp(lexer, engine, r_pb)?;
-        lhs = Expr::Binary {
-            op,
-            lhs: Box::new(lhs),
-            rhs: Box::new(rhs),
-        }
+        lhs = match op {
+            Operator::Pipe => build_pipe(engine, lhs, rhs)?,
+            _ => Expr::Binary {
+                op,
+                lhs: Box::new(lhs),
+                rhs: Box::new(rhs),
+            },
+        };
     }
     Some(lhs)
 }
 
-fn expr_table(
-    lexer: &mut Peekable<&mut Lexer>,
-    engine: &mut DiagnosticEngine,
-) -> Option<Expr> {
+fn expr_table(lexer: &mut Peekable<&mut Lexer>, engine: &mut DiagnosticEngine) -> Option<Expr> {
     let mut attr_set = HashMap::new();
     skip_new_line(lexer);
     loop {
@@ -268,11 +275,15 @@ fn expr_table(
             _ => {}
         }
 
-
         let name = match lexer.next() {
             Some(Ok((_, Token::Name(name), _))) => name,
             Some(Ok((line, tok, (col, _)))) => {
-                report_error(engine, line, col, format!("Expected Token::Name, found {:?}", tok));
+                report_error(
+                    engine,
+                    line,
+                    col,
+                    format!("Expected Token::Name, found {:?}", tok),
+                );
                 sync(lexer);
                 continue;
             }
@@ -283,7 +294,6 @@ fn expr_table(
             }
             None => break,
         };
-
 
         if !expect_token(lexer, engine, Token::Equal) {
             sync(lexer);
@@ -299,7 +309,7 @@ fn expr_table(
         };
 
         if !expect_token(lexer, engine, Token::Semicolon) {
-            sync_until(lexer, |tok| { matches!(tok, Token::Name(_))});
+            sync_until(lexer, |tok| matches!(tok, Token::Name(_)));
             continue;
         }
 
@@ -309,10 +319,7 @@ fn expr_table(
     Some(Expr::Table { fields: attr_set })
 }
 
-fn expr_list(
-    lexer: &mut Peekable<&mut Lexer>,
-    engine: &mut DiagnosticEngine,
-) -> Option<Expr> {
+fn expr_list(lexer: &mut Peekable<&mut Lexer>, engine: &mut DiagnosticEngine) -> Option<Expr> {
     let mut items = vec![];
     skip_new_line(lexer);
     loop {
@@ -366,7 +373,12 @@ fn get_params_of_function(
             Some(Ok((_, Token::Comma, _))) => continue,
             Some(Ok((_, Token::RightParen, _))) => break,
             Some(Ok((line, tok, (col, _)))) => {
-                report_error(engine, line, col, format!("Expected parameter or ')', found {:?}", tok));
+                report_error(
+                    engine,
+                    line,
+                    col,
+                    format!("Expected parameter or ')', found {:?}", tok),
+                );
                 sync(lexer);
                 break;
             }
@@ -376,7 +388,12 @@ fn get_params_of_function(
                 break;
             }
             None => {
-                report_error(engine, 0, 0, "Unexpected end of file in function parameters".to_string());
+                report_error(
+                    engine,
+                    0,
+                    0,
+                    "Unexpected end of file in function parameters".to_string(),
+                );
                 break;
             }
         }
@@ -427,7 +444,12 @@ fn expr_calle(
     let arg = match expr_with_bp(lexer, engine, 0) {
         Some(expr) => expr,
         None => {
-            report_error(engine, 0, 0, "Expected argument in function call".to_string());
+            report_error(
+                engine,
+                0,
+                0,
+                "Expected argument in function call".to_string(),
+            );
             // Try to recover to closing paren
             while !matches!(lexer.peek(), Some(Ok((_, Token::RightParen, _)))) {
                 lexer.next();
@@ -456,7 +478,12 @@ fn expr_calle(
                 args.push(arg);
             }
             Some(Ok((line, tok, (col, _)))) => {
-                report_error(engine, line, col, format!("Expected ',' or ')', found {:?}", tok));
+                report_error(
+                    engine,
+                    line,
+                    col,
+                    format!("Expected ',' or ')', found {:?}", tok),
+                );
                 sync(lexer);
                 continue;
             }
@@ -466,7 +493,12 @@ fn expr_calle(
                 continue;
             }
             None => {
-                report_error(engine, 0, 0, "Unexpected end of file in function call".to_string());
+                report_error(
+                    engine,
+                    0,
+                    0,
+                    "Unexpected end of file in function call".to_string(),
+                );
                 break;
             }
         }
@@ -494,32 +526,35 @@ fn expr_let_in(lexer: &mut Peekable<&mut Lexer>, engine: &mut DiagnosticEngine) 
         let name = match lexer.next() {
             Some(Ok((_, Token::Name(name), (_, _)))) => name,
             Some(Ok((line_of_code, _, (start_pos, _)))) => {
-                report_error(engine, line_of_code, start_pos, "Atrribute Name not found".to_string());
-                sync_until(lexer, |tok| { matches!(tok, Token::NewLine) } );
+                report_error(
+                    engine,
+                    line_of_code,
+                    start_pos,
+                    "Atrribute Name not found".to_string(),
+                );
+                sync_until(lexer, |tok| matches!(tok, Token::NewLine));
                 continue;
             }
             _ => panic!("Unexpect Parser Err"),
         };
-
 
         match lexer.next() {
-            Some(Ok((_, Token::Equal, (_, _)))) => {},
+            Some(Ok((_, Token::Equal, (_, _)))) => {}
             Some(Ok((line_of_code, _, (start_pos, _)))) => {
                 report_error(engine, line_of_code, start_pos, "Expect '='".to_string());
-                sync_until(lexer, |tok| { matches!(tok, Token::NewLine) } );
+                sync_until(lexer, |tok| matches!(tok, Token::NewLine));
                 continue;
             }
             _ => panic!("Unexpect Parser Err"),
         };
-
 
         let rhs = expr_with_bp(lexer, engine, 0)?;
 
         match lexer.next() {
-            Some(Ok((_, Token::Semicolon, (_, _)))) => {},
+            Some(Ok((_, Token::Semicolon, (_, _)))) => {}
             Some(Ok((line_of_code, _, (start_pos, _)))) => {
                 report_error(engine, line_of_code, start_pos, "Expect ';'".to_string());
-                sync_until(lexer, |tok| { matches!(tok, Token::NewLine) } );
+                sync_until(lexer, |tok| matches!(tok, Token::NewLine));
                 continue;
             }
             _ => panic!("Unexpect Parser Err"),
@@ -533,11 +568,14 @@ fn expr_let_in(lexer: &mut Peekable<&mut Lexer>, engine: &mut DiagnosticEngine) 
 
     Some(Expr::LetIn {
         let_part: attr_set,
-        in_part: Box::new(in_part)
+        in_part: Box::new(in_part),
     })
 }
 
-fn expr_interpolated_str(lexer: &mut Peekable<&mut Lexer>, engine: &mut DiagnosticEngine) -> Option<Expr> {
+fn expr_interpolated_str(
+    lexer: &mut Peekable<&mut Lexer>,
+    engine: &mut DiagnosticEngine,
+) -> Option<Expr> {
     let mut parts: Vec<InterpolatedPart> = vec![];
     loop {
         match lexer.next() {
@@ -548,62 +586,75 @@ fn expr_interpolated_str(lexer: &mut Peekable<&mut Lexer>, engine: &mut Diagnost
             Some(Ok((_, Token::InterpStart, (_, _)))) => {
                 let rhs = expr_with_bp(lexer, engine, 0)?;
                 parts.push(InterpolatedPart::Expr(rhs));
-            },
+            }
             Some(Ok((line_of_code, tok, (start_pos, _)))) => {
-                report_error(engine, line_of_code, start_pos, format!("Error in interpolatio '{:?}'", tok));
-                sync_until(lexer, |tok| { matches!(tok, Token::NewLine | Token::Semicolon) } );
+                report_error(
+                    engine,
+                    line_of_code,
+                    start_pos,
+                    format!("Error in interpolatio '{:?}'", tok),
+                );
+                sync_until(lexer, |tok| {
+                    matches!(tok, Token::NewLine | Token::Semicolon)
+                });
                 continue;
-            },
+            }
             _ => panic!("Unexpect Parser Err"),
         }
     }
     Some(Expr::InterpolatedString(parts))
 }
 
-fn expr_pipe(lexer: &mut Peekable<&mut Lexer>, engine: &mut DiagnosticEngine, lhs: Expr) -> Option<Expr> {
-    let mut new_lhs = match expr_with_bp(lexer, engine, 0) {
-        Some(Expr::FunctionCall { name, args }) => Expr::Pipe { lhs: Box::new(lhs), rhs: Box::new(Expr::FunctionCall { name, args }) },
-            Some(expr) => {
-                println!("hello {:?}", expr);
-                return None;
-            }
-        _ => {
-            report_error(engine, 0, 0, "Expected function call, found nothing".into());
-            return None;
+fn build_pipe(engine: &mut DiagnosticEngine, lhs: Expr, rhs: Expr) -> Option<Expr> {
+    match rhs {
+        Expr::FunctionCall { name, mut args } => {
+            let mut new_args = vec![lhs];
+            new_args.append(&mut args);
+
+            Some(Expr::FunctionCall {
+                name,
+                args: new_args,
+            })
         }
-    };
 
-    skip_new_line(lexer);
+        Expr::Var(name) => Some(Expr::FunctionCall {
+            name,
+            args: vec![lhs],
+        }),
 
-    while let Some(Ok((_, Token::Pipe, _))) = lexer.peek() {
-        lexer.next();
-        new_lhs = match expr_with_bp(lexer, engine, 0) {
-            Some(Expr::FunctionCall { name, args }) => Expr::Pipe { lhs: Box::new(new_lhs), rhs: Box::new(Expr::FunctionCall { name, args }) },
-            Some(expr) => {
-                println!("{:?}", expr);
-                return None;
-            }
-            _ => {
-
-                report_error(engine, 0, 0, "Expected function call, found nothing".into());
-                return None;
-            }
-        };
+        _ => {
+            report_error(engine, 0, 0, "Pipe only supports function calls".into());
+            None
+        }
     }
-
-    Some(new_lhs)
 }
 
-
-fn expr_member_access(lexer: &mut Peekable<&mut Lexer>, engine: &mut DiagnosticEngine, parent: Expr) -> Option<Expr> {
+fn expr_member_access(
+    lexer: &mut Peekable<&mut Lexer>,
+    engine: &mut DiagnosticEngine,
+    parent: Expr,
+) -> Option<Expr> {
     let mut lhs = match lexer.next() {
-        Some(Ok((_, Token::Name(member), _))) => Expr::AccessField { parent: Box::new(parent), child: member.clone() },
-        Some(Ok((line, tok, (col, _)))) => {
-            report_error(engine, line, col, format!("Expected access field name, found {:?}", tok));
-            return None;
+        Some(Ok((_, Token::Name(member), _))) => Expr::AccessField {
+            parent: Box::new(parent),
+            child: member.clone(),
         },
+        Some(Ok((line, tok, (col, _)))) => {
+            report_error(
+                engine,
+                line,
+                col,
+                format!("Expected access field name, found {:?}", tok),
+            );
+            return None;
+        }
         _ => {
-            report_error(engine, 0, 0, "Expected access field name, found nothing".into());
+            report_error(
+                engine,
+                0,
+                0,
+                "Expected access field name, found nothing".into(),
+            );
             return None;
         }
     };
@@ -611,13 +662,26 @@ fn expr_member_access(lexer: &mut Peekable<&mut Lexer>, engine: &mut DiagnosticE
     while let Some(Ok((_, Token::Dot, _))) = lexer.peek() {
         lexer.next();
         lhs = match lexer.next() {
-            Some(Ok((_, Token::Name(member), _))) => Expr::AccessField { parent: Box::new(lhs), child: member.clone() },
-            Some(Ok((line, tok, (col, _)))) => {
-                report_error(engine, line, col, format!("Expected access field name, found {:?}", tok));
-                return None;
+            Some(Ok((_, Token::Name(member), _))) => Expr::AccessField {
+                parent: Box::new(lhs),
+                child: member.clone(),
             },
+            Some(Ok((line, tok, (col, _)))) => {
+                report_error(
+                    engine,
+                    line,
+                    col,
+                    format!("Expected access field name, found {:?}", tok),
+                );
+                return None;
+            }
             _ => {
-                report_error(engine, 0, 0, "Expected access field name, found nothing".into());
+                report_error(
+                    engine,
+                    0,
+                    0,
+                    "Expected access field name, found nothing".into(),
+                );
                 return None;
             }
         };
@@ -636,7 +700,12 @@ fn expect_token(
             if tok == expected {
                 true
             } else {
-                report_error(engine, line, pos.0, format!("Expected {:?}, found {:?}", expected, tok));
+                report_error(
+                    engine,
+                    line,
+                    pos.0,
+                    format!("Expected {:?}, found {:?}", expected, tok),
+                );
                 false
             }
         }
@@ -645,7 +714,12 @@ fn expect_token(
             false
         }
         None => {
-            report_error(engine, 0, 0, format!("Expected {:?}, found end of file", expected));
+            report_error(
+                engine,
+                0,
+                0,
+                format!("Expected {:?}, found end of file", expected),
+            );
             false
         }
     }
@@ -660,10 +734,9 @@ fn prefix_binding_power(op: Operator) -> ((), u8) {
 
 fn infix_binding_power(op: Operator) -> (u8, u8) {
     match op {
+        Operator::Pipe => (0, 1),
         Operator::ConcatString => (0, 1),
         Operator::Add | Operator::Sub => (1, 2),
         Operator::Mul | Operator::Div => (3, 4),
     }
 }
-
-
