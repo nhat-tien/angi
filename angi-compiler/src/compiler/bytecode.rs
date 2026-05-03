@@ -261,6 +261,8 @@ impl BytecodeGen {
                     //     )
                     // };
 
+                    self.emit_ins(OpCode::RESETPAR.encode(vec![]));
+
                     for arg in args {
                         let reg_arg = &self.visit_expr(arg, false)?;
 

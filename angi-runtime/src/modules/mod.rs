@@ -47,6 +47,8 @@ impl FunctionRegistry {
         idx
     }
     pub fn resolve(&self, idx: u32, args: Vec<Value>) -> Result<Value, ForeignFnError> {
+        println!("idx {}", idx);
+        println!("args {:?}", args);
         match self.idx_map.get(&idx) {
             Some(func) => func(args),
             None => panic!("Function index {} not found", idx),

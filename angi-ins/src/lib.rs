@@ -45,6 +45,7 @@ define_opcodes! {
     CALL      = { code = 17, layout = [RegAddr,RegAddr] },             // Call Function
     GETFIELD  = { code = 18, layout = [RegAddr,RegAddr,RegAddr] },             // Call Function
     CFOREIGN  = { code = 19, layout = [RegAddr,ConstIdx] },             // Call Function
+    RESETPAR  = { code = 20, layout = [] },                            // Call Function
 }
 
 pub fn extract_opcode(byte: u32) -> Option<OpCode> {

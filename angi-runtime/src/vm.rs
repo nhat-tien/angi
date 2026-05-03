@@ -599,10 +599,13 @@ impl VM {
                     })?;
                     self.args_queue.push_back(value);
                 }
+                OpCode::RESETPAR => {
+                    self.args_queue.clear();
+                }
                 OpCode::CFOREIGN => {
                     let params = OpCode::CFOREIGN.decode(ins);
-                    let result = self.registry_func.resolve(params[1] as u32, self.args_queue.clone().into()).map_err(|_| VmError::UnexpectedError {
-                            message: "Error in eval foreign function".into(),
+                    let result = self.registry_func.resolve(params[1] as u32, self.args_queue.clone().into()).map_err(|e| VmError::UnexpectedError {
+                            message: format!("error {:?}", e),
                         })?;
                     self.registers.set(params[0] as usize, result);
                 }
